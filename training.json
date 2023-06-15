@@ -1,0 +1,727 @@
+{
+  "pipelineSpec": {
+    "components": {
+      "comp-bq-table-to-dataset": {
+        "executorLabel": "exec-bq-table-to-dataset",
+        "inputDefinitions": {
+          "parameters": {
+            "bq_client_project_id": {
+              "type": "STRING"
+            },
+            "dataset_id": {
+              "type": "STRING"
+            },
+            "dataset_location": {
+              "type": "STRING"
+            },
+            "extract_job_config": {
+              "type": "STRING"
+            },
+            "file_pattern": {
+              "type": "STRING"
+            },
+            "skip_if_exists": {
+              "type": "STRING"
+            },
+            "source_project_id": {
+              "type": "STRING"
+            },
+            "table_name": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "dataset": {
+              "artifactType": {
+                "schemaTitle": "system.Dataset",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "dataset_gcs_prefix": {
+              "type": "STRING"
+            },
+            "dataset_gcs_uri": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-bq-table-to-dataset-2": {
+        "executorLabel": "exec-bq-table-to-dataset-2",
+        "inputDefinitions": {
+          "parameters": {
+            "bq_client_project_id": {
+              "type": "STRING"
+            },
+            "dataset_id": {
+              "type": "STRING"
+            },
+            "dataset_location": {
+              "type": "STRING"
+            },
+            "extract_job_config": {
+              "type": "STRING"
+            },
+            "file_pattern": {
+              "type": "STRING"
+            },
+            "skip_if_exists": {
+              "type": "STRING"
+            },
+            "source_project_id": {
+              "type": "STRING"
+            },
+            "table_name": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "dataset": {
+              "artifactType": {
+                "schemaTitle": "system.Dataset",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "dataset_gcs_prefix": {
+              "type": "STRING"
+            },
+            "dataset_gcs_uri": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-bq-table-to-dataset-3": {
+        "executorLabel": "exec-bq-table-to-dataset-3",
+        "inputDefinitions": {
+          "parameters": {
+            "bq_client_project_id": {
+              "type": "STRING"
+            },
+            "dataset_id": {
+              "type": "STRING"
+            },
+            "dataset_location": {
+              "type": "STRING"
+            },
+            "extract_job_config": {
+              "type": "STRING"
+            },
+            "file_pattern": {
+              "type": "STRING"
+            },
+            "skip_if_exists": {
+              "type": "STRING"
+            },
+            "source_project_id": {
+              "type": "STRING"
+            },
+            "table_name": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "dataset": {
+              "artifactType": {
+                "schemaTitle": "system.Dataset",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "dataset_gcs_prefix": {
+              "type": "STRING"
+            },
+            "dataset_gcs_uri": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-execute-query": {
+        "executorLabel": "exec-execute-query",
+        "inputDefinitions": {
+          "parameters": {
+            "bq_client_project_id": {
+              "type": "STRING"
+            },
+            "dataset_location": {
+              "type": "STRING"
+            },
+            "query": {
+              "type": "STRING"
+            },
+            "query_job_config": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-execute-query-2": {
+        "executorLabel": "exec-execute-query-2",
+        "inputDefinitions": {
+          "parameters": {
+            "bq_client_project_id": {
+              "type": "STRING"
+            },
+            "dataset_location": {
+              "type": "STRING"
+            },
+            "query": {
+              "type": "STRING"
+            },
+            "query_job_config": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-get-data-version": {
+        "executorLabel": "exec-get-data-version",
+        "inputDefinitions": {
+          "parameters": {
+            "dataset_id": {
+              "type": "STRING"
+            },
+            "dataset_location": {
+              "type": "STRING"
+            },
+            "payload_data_version": {
+              "type": "STRING"
+            },
+            "project_id": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "parameters": {
+            "Output": {
+              "type": "STRING"
+            }
+          }
+        }
+      }
+    },
+    "deploymentSpec": {
+      "executors": {
+        "exec-bq-table-to-dataset": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "bq_table_to_dataset"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef bq_table_to_dataset(\n    bq_client_project_id: str,\n    source_project_id: str,\n    dataset_id: str,\n    table_name: str,\n    dataset: Output[Dataset],\n    destination_gcs_uri: Optional[str] = None,\n    dataset_location: str = \"europe-west2\",\n    extract_job_config: Optional[dict] = None,\n    skip_if_exists: bool = True,\n    file_pattern: Optional[str] = None,\n) -> NamedTuple(\"Outputs\", [(\"dataset_gcs_prefix\", str), (\"dataset_gcs_uri\", list)]):\n    \"\"\"\n    Extract BQ table in GCS.\n\n    Args:\n        bq_client_project_id (str): Project ID that will be used by the BQ client.\n        source_project_id (str): Project id from where BQ table will be extracted.\n        dataset_id (str): Dataset ID from where the BQ table will be extracted.\n        table_name (str): Table name (without project ID and dataset ID) from\n            where the BQ table will be extracted.\n        dataset (Output[Dataset]): Output dataset artifact generated by the operation,\n            this parameter will be passed automatically by the orchestrator.\n        dataset_location (str): BQ dataset location. Defaults to \"europe-west2\".\n        extract_job_config (Optional[dict], optional): Dict containing optional\n            parameters required by the bq extract operation. Defaults to None.\n            See available parameters here\n            https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.ExtractJobConfig.html # noqa\n        skip_if_exists (bool): If True, skip extracting the dataset if the\n            output resource already exists.\n        file_pattern (Optional[str], optional): File pattern to append to the\n            output files (e.g. `.csv`). Defaults to None.\n        destination_gcs_uri (Optional[str], optional): GCS URI to use for\n            saving query results. Defaults to None.\n\n    Returns:\n        NamedTuple (str, list): Output dataset directory and its GCS uri\n    \"\"\"\n    import os\n    from pathlib import Path\n\n    from google.cloud import bigquery\n    from google.cloud.exceptions import GoogleCloudError\n    from loguru import logger\n\n    # Set uri of output dataset if destination_gcs_uri is provided\n    if destination_gcs_uri:\n        dataset.uri = destination_gcs_uri\n\n    logger.info(f\"Checking if destination exists: {dataset.path}.\")\n    if Path(dataset.path).exists() and skip_if_exists:\n        logger.warning(\"Destination already exists, skipping table extraction.\")\n        return\n\n    full_table_id = f\"{source_project_id}.{dataset_id}.{table_name}\"\n    table = bigquery.table.Table(table_ref=full_table_id)\n\n    if extract_job_config is None:\n        extract_job_config = {}\n    job_config = bigquery.job.ExtractJobConfig(**extract_job_config)\n    client = bigquery.client.Client(\n        project=bq_client_project_id, location=dataset_location\n    )\n\n    # If file_pattern is provided, join dataset.uri with file_pattern\n    dataset_uri = dataset.uri\n    if file_pattern is not None:\n        dataset_uri = os.path.join(dataset_uri, file_pattern)\n    dataset_directory = os.path.dirname(dataset_uri)\n\n    logger.info(f\"Extract table {table} to {dataset_uri}.\")\n    extract_job = client.extract_table(\n        table,\n        dataset_uri,\n        job_config=job_config,\n    )\n\n    try:\n        result = extract_job.result()\n        logger.info(f\"Table extracted, result: {result}.\")\n    except GoogleCloudError as e:\n        logger.error(e)\n        logger.error(extract_job.error_result)\n        logger.error(extract_job.errors)\n        raise e\n\n    return (dataset_directory, [dataset_uri])\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-bq-table-to-dataset-2": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "bq_table_to_dataset"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef bq_table_to_dataset(\n    bq_client_project_id: str,\n    source_project_id: str,\n    dataset_id: str,\n    table_name: str,\n    dataset: Output[Dataset],\n    destination_gcs_uri: Optional[str] = None,\n    dataset_location: str = \"europe-west2\",\n    extract_job_config: Optional[dict] = None,\n    skip_if_exists: bool = True,\n    file_pattern: Optional[str] = None,\n) -> NamedTuple(\"Outputs\", [(\"dataset_gcs_prefix\", str), (\"dataset_gcs_uri\", list)]):\n    \"\"\"\n    Extract BQ table in GCS.\n\n    Args:\n        bq_client_project_id (str): Project ID that will be used by the BQ client.\n        source_project_id (str): Project id from where BQ table will be extracted.\n        dataset_id (str): Dataset ID from where the BQ table will be extracted.\n        table_name (str): Table name (without project ID and dataset ID) from\n            where the BQ table will be extracted.\n        dataset (Output[Dataset]): Output dataset artifact generated by the operation,\n            this parameter will be passed automatically by the orchestrator.\n        dataset_location (str): BQ dataset location. Defaults to \"europe-west2\".\n        extract_job_config (Optional[dict], optional): Dict containing optional\n            parameters required by the bq extract operation. Defaults to None.\n            See available parameters here\n            https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.ExtractJobConfig.html # noqa\n        skip_if_exists (bool): If True, skip extracting the dataset if the\n            output resource already exists.\n        file_pattern (Optional[str], optional): File pattern to append to the\n            output files (e.g. `.csv`). Defaults to None.\n        destination_gcs_uri (Optional[str], optional): GCS URI to use for\n            saving query results. Defaults to None.\n\n    Returns:\n        NamedTuple (str, list): Output dataset directory and its GCS uri\n    \"\"\"\n    import os\n    from pathlib import Path\n\n    from google.cloud import bigquery\n    from google.cloud.exceptions import GoogleCloudError\n    from loguru import logger\n\n    # Set uri of output dataset if destination_gcs_uri is provided\n    if destination_gcs_uri:\n        dataset.uri = destination_gcs_uri\n\n    logger.info(f\"Checking if destination exists: {dataset.path}.\")\n    if Path(dataset.path).exists() and skip_if_exists:\n        logger.warning(\"Destination already exists, skipping table extraction.\")\n        return\n\n    full_table_id = f\"{source_project_id}.{dataset_id}.{table_name}\"\n    table = bigquery.table.Table(table_ref=full_table_id)\n\n    if extract_job_config is None:\n        extract_job_config = {}\n    job_config = bigquery.job.ExtractJobConfig(**extract_job_config)\n    client = bigquery.client.Client(\n        project=bq_client_project_id, location=dataset_location\n    )\n\n    # If file_pattern is provided, join dataset.uri with file_pattern\n    dataset_uri = dataset.uri\n    if file_pattern is not None:\n        dataset_uri = os.path.join(dataset_uri, file_pattern)\n    dataset_directory = os.path.dirname(dataset_uri)\n\n    logger.info(f\"Extract table {table} to {dataset_uri}.\")\n    extract_job = client.extract_table(\n        table,\n        dataset_uri,\n        job_config=job_config,\n    )\n\n    try:\n        result = extract_job.result()\n        logger.info(f\"Table extracted, result: {result}.\")\n    except GoogleCloudError as e:\n        logger.error(e)\n        logger.error(extract_job.error_result)\n        logger.error(extract_job.errors)\n        raise e\n\n    return (dataset_directory, [dataset_uri])\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-bq-table-to-dataset-3": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "bq_table_to_dataset"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef bq_table_to_dataset(\n    bq_client_project_id: str,\n    source_project_id: str,\n    dataset_id: str,\n    table_name: str,\n    dataset: Output[Dataset],\n    destination_gcs_uri: Optional[str] = None,\n    dataset_location: str = \"europe-west2\",\n    extract_job_config: Optional[dict] = None,\n    skip_if_exists: bool = True,\n    file_pattern: Optional[str] = None,\n) -> NamedTuple(\"Outputs\", [(\"dataset_gcs_prefix\", str), (\"dataset_gcs_uri\", list)]):\n    \"\"\"\n    Extract BQ table in GCS.\n\n    Args:\n        bq_client_project_id (str): Project ID that will be used by the BQ client.\n        source_project_id (str): Project id from where BQ table will be extracted.\n        dataset_id (str): Dataset ID from where the BQ table will be extracted.\n        table_name (str): Table name (without project ID and dataset ID) from\n            where the BQ table will be extracted.\n        dataset (Output[Dataset]): Output dataset artifact generated by the operation,\n            this parameter will be passed automatically by the orchestrator.\n        dataset_location (str): BQ dataset location. Defaults to \"europe-west2\".\n        extract_job_config (Optional[dict], optional): Dict containing optional\n            parameters required by the bq extract operation. Defaults to None.\n            See available parameters here\n            https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.ExtractJobConfig.html # noqa\n        skip_if_exists (bool): If True, skip extracting the dataset if the\n            output resource already exists.\n        file_pattern (Optional[str], optional): File pattern to append to the\n            output files (e.g. `.csv`). Defaults to None.\n        destination_gcs_uri (Optional[str], optional): GCS URI to use for\n            saving query results. Defaults to None.\n\n    Returns:\n        NamedTuple (str, list): Output dataset directory and its GCS uri\n    \"\"\"\n    import os\n    from pathlib import Path\n\n    from google.cloud import bigquery\n    from google.cloud.exceptions import GoogleCloudError\n    from loguru import logger\n\n    # Set uri of output dataset if destination_gcs_uri is provided\n    if destination_gcs_uri:\n        dataset.uri = destination_gcs_uri\n\n    logger.info(f\"Checking if destination exists: {dataset.path}.\")\n    if Path(dataset.path).exists() and skip_if_exists:\n        logger.warning(\"Destination already exists, skipping table extraction.\")\n        return\n\n    full_table_id = f\"{source_project_id}.{dataset_id}.{table_name}\"\n    table = bigquery.table.Table(table_ref=full_table_id)\n\n    if extract_job_config is None:\n        extract_job_config = {}\n    job_config = bigquery.job.ExtractJobConfig(**extract_job_config)\n    client = bigquery.client.Client(\n        project=bq_client_project_id, location=dataset_location\n    )\n\n    # If file_pattern is provided, join dataset.uri with file_pattern\n    dataset_uri = dataset.uri\n    if file_pattern is not None:\n        dataset_uri = os.path.join(dataset_uri, file_pattern)\n    dataset_directory = os.path.dirname(dataset_uri)\n\n    logger.info(f\"Extract table {table} to {dataset_uri}.\")\n    extract_job = client.extract_table(\n        table,\n        dataset_uri,\n        job_config=job_config,\n    )\n\n    try:\n        result = extract_job.result()\n        logger.info(f\"Table extracted, result: {result}.\")\n    except GoogleCloudError as e:\n        logger.error(e)\n        logger.error(extract_job.error_result)\n        logger.error(extract_job.errors)\n        raise e\n\n    return (dataset_directory, [dataset_uri])\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-execute-query": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "execute_query"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef execute_query(\n    query: str,\n    bq_client_project_id: str,\n    dataset_location: str = \"europe-west2\",\n    query_job_config: dict = {},\n) -> None:\n    \"\"\"\n    Run a BQ query.\n\n    Args:\n        query (str): SQL query to execute.\n        bq_client_project_id (str): Project ID that will be used by the BQ client.\n        dataset_location (str): BQ dataset location.\n        query_job_config (dict): Dict containing optional parameters required\n            by the bq query operation. No need to specify destination param.\n            Defaults to {}.\n            See available parameters here\n            https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.QueryJobConfig.html\n    \"\"\"\n    from google.cloud import bigquery\n    from google.cloud.exceptions import GoogleCloudError\n    from loguru import logger\n\n    job_config = bigquery.QueryJobConfig(**query_job_config)\n\n    bq_client = bigquery.client.Client(\n        project=bq_client_project_id, location=dataset_location\n    )\n    query_job = bq_client.query(query, job_config=job_config)\n\n    try:\n        _ = query_job.result()\n        logger.info(\"BQ query executed.\")\n    except GoogleCloudError as e:\n        logger.error(e)\n        logger.error(query_job.error_result)\n        logger.error(query_job.errors)\n        raise e\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-execute-query-2": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "execute_query"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef execute_query(\n    query: str,\n    bq_client_project_id: str,\n    dataset_location: str = \"europe-west2\",\n    query_job_config: dict = {},\n) -> None:\n    \"\"\"\n    Run a BQ query.\n\n    Args:\n        query (str): SQL query to execute.\n        bq_client_project_id (str): Project ID that will be used by the BQ client.\n        dataset_location (str): BQ dataset location.\n        query_job_config (dict): Dict containing optional parameters required\n            by the bq query operation. No need to specify destination param.\n            Defaults to {}.\n            See available parameters here\n            https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.QueryJobConfig.html\n    \"\"\"\n    from google.cloud import bigquery\n    from google.cloud.exceptions import GoogleCloudError\n    from loguru import logger\n\n    job_config = bigquery.QueryJobConfig(**query_job_config)\n\n    bq_client = bigquery.client.Client(\n        project=bq_client_project_id, location=dataset_location\n    )\n    query_job = bq_client.query(query, job_config=job_config)\n\n    try:\n        _ = query_job.result()\n        logger.info(\"BQ query executed.\")\n    except GoogleCloudError as e:\n        logger.error(e)\n        logger.error(query_job.error_result)\n        logger.error(query_job.errors)\n        raise e\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-get-data-version": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "get_data_version"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef get_data_version(\n    payload_data_version: str,\n    project_id: str,\n    dataset_id: str,\n    dataset_location: str = \"europe-west2\",\n) -> str:\n    \"\"\"Get data version to use in the pipeline.\n\n    Args:\n        payload_data_version (str): Data version provided in the payload file.\n        project_id (str): Bigquery project ID.\n        dataset_id (str): Bigquery dataset ID. This function will look for the\n            most recent BQ dataset that has the pattern of\n            {dataset_id}_%Y%m%dT%H%M%S.\n        dataset_location (str, optional): Bigquery dataset location.\n            Defaults to \"europe-west2\".\n    \"\"\"\n    import re\n\n    from google.cloud import bigquery\n    from loguru import logger\n\n    if payload_data_version == \"\":\n        bq_client = bigquery.client.Client(\n            project=project_id, location=dataset_location\n        )\n        datasets = [d.dataset_id for d in list(bq_client.list_datasets())]\n        matches = [\n            re.search(rf\"(?<={dataset_id}_)(\\d{{8}}T\\d{{6}})\", d) for d in datasets\n        ]\n        versions = sorted([m.group(0) for m in matches if m is not None])\n        logger.debug(f\"Found {len(versions)} versions of the data.\")\n\n        try:\n            res = versions[-1]\n            logger.info(f\"Most recent data version retrieved: {res}.\")\n            return res\n        except IndexError as e:\n            logger.error(\n                f\"No datasets matching the expected pattern in project {project_id}.\"\n            )\n            raise e\n    else:\n        logger.info(f\"Data version {payload_data_version} provided in payload.\")\n        return payload_data_version\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        }
+      }
+    },
+    "pipelineInfo": {
+      "name": "frauds-training-pipeline-dev"
+    },
+    "root": {
+      "dag": {
+        "tasks": {
+          "bq-table-to-dataset": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-bq-table-to-dataset"
+            },
+            "dependentTasks": [
+              "execute-query-2",
+              "get-data-version"
+            ],
+            "inputs": {
+              "parameters": {
+                "bq_client_project_id": {
+                  "componentInputParameter": "project_id"
+                },
+                "dataset_id": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}"
+                    }
+                  }
+                },
+                "dataset_location": {
+                  "componentInputParameter": "dataset_location"
+                },
+                "extract_job_config": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{\"destination_format\": \"PARQUET\"}"
+                    }
+                  }
+                },
+                "file_pattern": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "file_*"
+                    }
+                  }
+                },
+                "pipelineparam--dataset_id": {
+                  "componentInputParameter": "dataset_id"
+                },
+                "pipelineparam--get-data-version-Output": {
+                  "taskOutputParameter": {
+                    "outputParameterKey": "Output",
+                    "producerTask": "get-data-version"
+                  }
+                },
+                "skip_if_exists": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "True"
+                    }
+                  }
+                },
+                "source_project_id": {
+                  "componentInputParameter": "project_id"
+                },
+                "table_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "training"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "Extract training data"
+            }
+          },
+          "bq-table-to-dataset-2": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-bq-table-to-dataset-2"
+            },
+            "dependentTasks": [
+              "execute-query-2",
+              "get-data-version"
+            ],
+            "inputs": {
+              "parameters": {
+                "bq_client_project_id": {
+                  "componentInputParameter": "project_id"
+                },
+                "dataset_id": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}"
+                    }
+                  }
+                },
+                "dataset_location": {
+                  "componentInputParameter": "dataset_location"
+                },
+                "extract_job_config": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{\"destination_format\": \"PARQUET\"}"
+                    }
+                  }
+                },
+                "file_pattern": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "file_*"
+                    }
+                  }
+                },
+                "pipelineparam--dataset_id": {
+                  "componentInputParameter": "dataset_id"
+                },
+                "pipelineparam--get-data-version-Output": {
+                  "taskOutputParameter": {
+                    "outputParameterKey": "Output",
+                    "producerTask": "get-data-version"
+                  }
+                },
+                "skip_if_exists": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "True"
+                    }
+                  }
+                },
+                "source_project_id": {
+                  "componentInputParameter": "project_id"
+                },
+                "table_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "validation"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "Extract validation data"
+            }
+          },
+          "bq-table-to-dataset-3": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-bq-table-to-dataset-3"
+            },
+            "dependentTasks": [
+              "execute-query-2",
+              "get-data-version"
+            ],
+            "inputs": {
+              "parameters": {
+                "bq_client_project_id": {
+                  "componentInputParameter": "project_id"
+                },
+                "dataset_id": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}"
+                    }
+                  }
+                },
+                "dataset_location": {
+                  "componentInputParameter": "dataset_location"
+                },
+                "extract_job_config": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{\"destination_format\": \"PARQUET\"}"
+                    }
+                  }
+                },
+                "file_pattern": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "file_*"
+                    }
+                  }
+                },
+                "pipelineparam--dataset_id": {
+                  "componentInputParameter": "dataset_id"
+                },
+                "pipelineparam--get-data-version-Output": {
+                  "taskOutputParameter": {
+                    "outputParameterKey": "Output",
+                    "producerTask": "get-data-version"
+                  }
+                },
+                "skip_if_exists": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "True"
+                    }
+                  }
+                },
+                "source_project_id": {
+                  "componentInputParameter": "project_id"
+                },
+                "table_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "testing"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "Extract test data"
+            }
+          },
+          "execute-query": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-execute-query"
+            },
+            "dependentTasks": [
+              "get-data-version"
+            ],
+            "inputs": {
+              "parameters": {
+                "bq_client_project_id": {
+                  "componentInputParameter": "project_id"
+                },
+                "dataset_location": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "europe-west2"
+                    }
+                  }
+                },
+                "pipelineparam--dataset_id": {
+                  "componentInputParameter": "dataset_id"
+                },
+                "pipelineparam--get-data-version-Output": {
+                  "taskOutputParameter": {
+                    "outputParameterKey": "Output",
+                    "producerTask": "get-data-version"
+                  }
+                },
+                "pipelineparam--project_id": {
+                  "componentInputParameter": "project_id"
+                },
+                "query": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "CREATE TEMP TABLE merged\nCLUSTER BY mcc, datetime_unix_seconds\nAS (\n    WITH transactions AS (\n        /* Features related to transactions */\n        SELECT\n            ROW_NUMBER() OVER() AS transaction_id,\n            DATETIME(t.year, t.month, t.day, CAST(SUBSTR(t.time, 1, 2) AS INT), CAST(SUBSTR(t.time, 4, 2) AS INT), 0) AS datetime,\n            t.year,\n            SIN((CAST(SUBSTR(t.time, 1, 2) AS INT) / 24) * 2 * ACOS(-1)) AS hour_sin,\n            COS((CAST(SUBSTR(t.time, 1, 2) AS INT) / 24) * 2 * ACOS(-1)) AS hour_cos,\n            SIN(((t.month - 1) / 12) * 2 * ACOS(-1)) AS month_sin,\n            COS(((t.month - 1) / 12) * 2 * ACOS(-1)) AS month_cos,\n            IF(t.year >= 2015, 1, 0) AS is_2015_or_later,\n            t.amount,\n            IF(t.use_chip = \"Chip Transaction\", 1, 0) AS chip_transaction,\n            IF(t.use_chip = \"Swipe Transaction\", 1, 0) AS swipe_transaction,\n            IF(t.use_chip = \"Online Transaction\", 1, 0) AS online_transaction,\n            IF(t.use_chip = \"Chip Transaction\" OR t.use_chip = \"Swipe Transaction\", 1, 0) AS card_present_transaction,\n            t.card,\n            t.user,\n            t.mcc,\n            CAST(t.Is_Fraud_ AS INT) AS is_fraud\n\n        FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.transactions` t\n    )\n\n    , users AS (\n        /* Features related to users */\n        SELECT\n            u.user,\n            IF(u.gender = \"Male\", 0, 1) AS gender,\n            CAST(REPLACE(u.`Per Capita Income - Zipcode`, \"$\", \"\") AS NUMERIC) AS per_capita_income_zipcode,\n            CAST(REPLACE(u.`Yearly Income - Person`, \"$\", \"\") AS NUMERIC) AS yearly_income_person,\n            CAST(REPLACE(u.`Total Debt`, \"$\", \"\") AS NUMERIC) AS total_debt,\n\n        FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.users` u\n    )\n\n    , cards AS (\n        /* Features related to cards */\n        SELECT\n            user,\n            card_index,\n            IF(card_brand = \"Amex\", 1, 0) AS amex,\n            IF(card_brand = \"Discover\", 1, 0) AS discover,\n            IF(card_brand = \"Mastercard\", 1, 0) AS mastercard,\n            IF(card_brand = \"Visa\", 1, 0) AS visa,\n            IF(card_type = \"Credit\", 1, 0) AS credit,\n            IF(card_type = \"Debit\", 1, 0) AS debit,\n            IF(card_type = \"Debit (Prepaid)\", 1, 0) AS debit_prepaid,\n            credit_limit,\n            IF(has_chip IS TRUE, 1, 0) AS has_chip,\n            IF(card_on_dark_web IS TRUE, 1, 0) AS card_on_dark_web,\n\n        FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.cards`\n    )\n\n    /* Merging all features together */\n    SELECT\n        t.transaction_id,\n        t.datetime,\n        t.year,\n        UNIX_SECONDS(CAST(t.datetime AS TIMESTAMP)) AS datetime_unix_seconds,\n        t.hour_sin,\n        t.hour_cos,\n        t.month_sin,\n        t.month_cos,\n        EXTRACT(DAYOFWEEK FROM t.datetime) AS day_of_week,\n        IF(EXTRACT(DAYOFWEEK FROM t.datetime) IN (1, 7), 1, 0) AS weekend,\n        IF(EXTRACT(DATE FROM t.datetime) IN (SELECT date FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.holidays`), 1, 0) AS is_holiday,\n        SIN((IF(EXTRACT(DAYOFWEEK FROM t.datetime) = 1, 6, EXTRACT(DAYOFWEEK FROM t.datetime) - 2) / 7) * 2 * ACOS(-1)) AS day_of_week_sin,\n        COS((IF(EXTRACT(DAYOFWEEK FROM t.datetime) = 1, 6, EXTRACT(DAYOFWEEK FROM t.datetime) - 2) / 7) * 2 * ACOS(-1)) AS day_of_week_cos,\n        t.is_2015_or_later,\n        t.amount,\n        t.swipe_transaction,\n        t.chip_transaction,\n        t.online_transaction,\n        t.card_present_transaction,\n        IF(t.is_fraud = 1 AND t.chip_transaction = 1, 1, 0) AS fraud_chip,\n        IF(t.is_fraud = 1 AND t.swipe_transaction = 1, 1, 0) AS fraud_swipe,\n        IF(t.is_fraud = 1 AND t.online_transaction = 1, 1, 0) AS fraud_online,\n        IF(t.is_fraud = 1 AND t.card_present_transaction = 1, 1, 0) AS fraud_card_present,\n        t.user,\n        t.mcc,\n        u.gender,\n        c.amex,\n        c.discover,\n        c.mastercard,\n        c.visa,\n        c.credit,\n        c.debit,\n        c.debit_prepaid,\n        c.credit_limit,\n        c.has_chip,\n        c.card_on_dark_web,\n        u.per_capita_income_zipcode,\n        u.yearly_income_person,\n        u.total_debt,\n        t.is_fraud,\n\n    FROM transactions t\n\n    INNER JOIN cards c\n        ON t.card = c.card_index\n        AND t.user = c.user\n\n    INNER JOIN users u\n        ON t.user = u.user\n)\n;\n\nCREATE TEMP TABLE mcc_aux AS (\n    /* Rolling features related to MCC */\n    SELECT\n        m.transaction_id,\n        SUM(m.is_fraud) OVER(mcc_window) / COUNT(m.is_fraud) OVER(mcc_window) AS mcc_mean_encoding\n\n    FROM merged m\n    WINDOW mcc_window AS (PARTITION BY m.mcc ORDER BY m.datetime_unix_seconds RANGE BETWEEN UNBOUNDED PRECEDING AND 604800 PRECEDING)\n)\n;\n\nCREATE TEMP TABLE user_aux\nCLUSTER BY user, datetime_unix_seconds\n/* Rolling features related to users */\nAS (\n    SELECT\n        m.*,\n        AVG(m.amount) OVER(user_window) AS mean_amount,\n        COUNT(m.transaction_id) OVER(user_window) AS transaction_count,\n        DATE_DIFF(m.datetime, MIN(m.datetime) OVER(PARTITION BY m.user), DAY) AS days_since_first_transaction,\n\n    FROM merged m\n    WINDOW user_window AS (PARTITION BY m.user ORDER BY m.datetime ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING)\n)\n;\n\nCREATE TEMP TABLE rolling_aux_amount_frequency AS (\n    /* Rolling features related to transaction amount and frquency */\n    WITH tmp AS (\n        SELECT\n            r.*,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 86400 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_1_days,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 172800 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_2_days,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 604800 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_7_days,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_30_days,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_year,\n            IF(\n                r.days_since_first_transaction > 0,\n                (r.transaction_count - 1) / r.days_since_first_transaction,\n                0\n            ) AS transaction_frequency_all,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 86400 PRECEDING AND 1 PRECEDING)\n                    / LEAST(1, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_1_days,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 172800 PRECEDING AND 1 PRECEDING)\n                    / LEAST(2, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_2_days,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 604800 PRECEDING AND 1 PRECEDING)\n                    / LEAST(7, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_7_days,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 1 PRECEDING)\n                    / LEAST(30, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_30_days,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 1 PRECEDING)\n                    / LEAST(365, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_year\n\n        FROM user_aux r\n    )\n    SELECT\n        t.transaction_id,\n        t.mean_amount,\n        t.transaction_count,\n        days_since_first_transaction,\n        mean_amount_last_year,\n        mean_amount_last_30_days,\n        mean_amount_last_7_days,\n        mean_amount_last_2_days,\n        mean_amount_last_1_days,\n        transaction_frequency_all,\n        transaction_frequency_last_year,\n        transaction_frequency_last_30_days,\n        transaction_frequency_last_7_days,\n        transaction_frequency_last_2_days,\n        transaction_frequency_last_1_days,\n\n        COALESCE(SAFE_DIVIDE(mean_amount_last_7_days, mean_amount_last_year), 0) AS mean_amount_last_7_days_relative_to_last_year,\n        COALESCE(SAFE_DIVIDE(mean_amount_last_2_days, mean_amount_last_year), 0) AS mean_amount_last_2_days_relative_to_last_year,\n        COALESCE(SAFE_DIVIDE(mean_amount_last_1_days, mean_amount_last_year), 0) AS mean_amount_last_1_days_relative_to_last_year,\n\n        COALESCE(SAFE_DIVIDE(mean_amount_last_7_days, mean_amount_last_30_days), 0) AS mean_amount_last_7_days_relative_to_last_30_days,\n        COALESCE(SAFE_DIVIDE(mean_amount_last_2_days, mean_amount_last_30_days), 0) AS mean_amount_last_2_days_relative_to_last_30_days,\n        COALESCE(SAFE_DIVIDE(mean_amount_last_1_days, mean_amount_last_30_days), 0) AS mean_amount_last_1_days_relative_to_last_30_days,\n\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_7_days, transaction_frequency_last_year), 0) AS `7_days_transaction_frequency_relative_to_last_year`,\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_2_days, transaction_frequency_last_year), 0) AS `2_days_transaction_frequency_relative_to_last_year`,\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_1_days, transaction_frequency_last_year), 0) AS `1_days_transaction_frequency_relative_to_last_year`,\n\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_7_days, transaction_frequency_last_30_days), 0) AS `7_days_transaction_frequency_relative_to_last_30_days`,\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_2_days, transaction_frequency_last_30_days), 0) AS `2_days_transaction_frequency_relative_to_last_30_days`,\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_1_days, transaction_frequency_last_30_days), 0) AS `1_days_transaction_frequency_relative_to_last_30_days`,\n\n    FROM tmp t\n)\n;\n\nCREATE TEMP TABLE rolling_aux_frauds\n/* Rolling features related to amount of frauds */\nAS (\n    WITH tmp1 AS (\n        SELECT\n            m.transaction_id,\n            m.year,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_2_years,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_365_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_60_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_30_days,\n\n        FROM merged m\n\n        WHERE m.year <= 2000\n    )\n\n    , tmp2 AS (\n        SELECT\n            m.transaction_id,\n            m.year,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_2_years,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_365_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_60_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_30_days,\n\n        FROM merged m\n\n        WHERE m.year BETWEEN 1998 AND 2010\n    )\n\n    , tmp3 AS (\n        SELECT\n            m.transaction_id,\n            m.year,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_2_years,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_365_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_60_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_30_days,\n\n        FROM merged m\n\n        WHERE m.year BETWEEN 2008 AND 2015\n    )\n\n    , tmp4 AS (\n        SELECT\n            m.transaction_id,\n            m.year,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_2_years,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_365_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_60_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_30_days,\n\n        FROM merged m\n\n        WHERE m.year >= 2013\n    )\n\n    , all_years AS (\n        SELECT * EXCEPT(year) FROM tmp1\n\n        UNION ALL\n\n        SELECT * EXCEPT(year) FROM tmp2 WHERE year BETWEEN 2001 AND 2010\n\n        UNION ALL\n\n        SELECT * EXCEPT(year) FROM tmp3 WHERE year BETWEEN 2011 AND 2015\n\n        UNION ALL\n\n        SELECT * EXCEPT(year) FROM tmp4 WHERE year >= 2016\n    )\n\n    SELECT\n        a.*,\n        COALESCE(SAFE_DIVIDE(fraud_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_swipe_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_swipe_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_swipe_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_swipe_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_chip_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_chip_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_chip_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_chip_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_online_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_online_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_online_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_online_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_card_present_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_card_present_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_card_present_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_card_present_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_30_days, fraud_rolling_mean_30_days), 0) AS fraud_swipe_rolling_30_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_30_days, fraud_rolling_mean_30_days), 0) AS fraud_chip_rolling_30_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_30_days, fraud_rolling_mean_30_days), 0) AS fraud_online_rolling_30_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_30_days, fraud_rolling_mean_30_days), 0) AS fraud_card_present_rolling_30_days_relative_to_all_frauds,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_60_days, fraud_rolling_mean_60_days), 0) AS fraud_swipe_rolling_60_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_60_days, fraud_rolling_mean_60_days), 0) AS fraud_chip_rolling_60_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_60_days, fraud_rolling_mean_60_days), 0) AS fraud_online_rolling_60_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_60_days, fraud_rolling_mean_60_days), 0) AS fraud_card_present_rolling_60_days_relative_to_all_frauds,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_365_days, fraud_rolling_mean_365_days), 0) AS fraud_swipe_rolling_365_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_365_days, fraud_rolling_mean_365_days), 0) AS fraud_chip_rolling_365_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_365_days, fraud_rolling_mean_365_days), 0) AS fraud_online_rolling_365_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_365_days, fraud_rolling_mean_365_days), 0) AS fraud_card_present_rolling_365_days_relative_to_all_frauds,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_2_years, fraud_rolling_mean_2_years), 0) AS fraud_swipe_rolling_2_years_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_2_years, fraud_rolling_mean_2_years), 0) AS fraud_chip_rolling_2_years_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_2_years, fraud_rolling_mean_2_years), 0) AS fraud_online_rolling_2_years_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_2_years, fraud_rolling_mean_2_years), 0) AS fraud_card_present_rolling_2_years_relative_to_all_frauds,\n\n    FROM all_years a\n)\n;\n\nCREATE OR REPLACE TABLE `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.preprocessed` \nCLUSTER BY datetime_unix_seconds\nAS (\n    SELECT\n        m.transaction_id,\n        m.datetime_unix_seconds,\n        `amount`,\n`has_chip`,\n`gender`,\n`online_transaction`,\n`amex`,\n`discover`,\n`mastercard`,\n`visa`,\n`credit`,\n`debit`,\n`debit_prepaid`,\n`mcc_mean_encoding`,\n`card_present_transaction`,\n`fraud_rolling_mean_30_days`,\n`fraud_rolling_mean_60_days`,\n`fraud_rolling_mean_365_days`,\n`fraud_rolling_mean_2_years`,\n`fraud_online_rolling_mean_30_days`,\n`fraud_online_rolling_mean_60_days`,\n`fraud_online_rolling_mean_365_days`,\n`fraud_online_rolling_mean_2_years`,\n`fraud_card_present_rolling_mean_30_days`,\n`fraud_card_present_rolling_mean_60_days`,\n`fraud_card_present_rolling_mean_365_days`,\n`fraud_card_present_rolling_mean_2_years`,\n`fraud_rolling_30_days_relative_to_365_days`,\n`fraud_rolling_30_days_relative_to_2_years`,\n`fraud_rolling_60_days_relative_to_365_days`,\n`fraud_rolling_60_days_relative_to_2_years`,\n`fraud_online_rolling_30_days_relative_to_365_days`,\n`fraud_online_rolling_30_days_relative_to_2_years`,\n`fraud_online_rolling_60_days_relative_to_365_days`,\n`fraud_online_rolling_60_days_relative_to_2_years`,\n`fraud_card_present_rolling_30_days_relative_to_365_days`,\n`fraud_card_present_rolling_30_days_relative_to_2_years`,\n`fraud_card_present_rolling_60_days_relative_to_365_days`,\n`fraud_card_present_rolling_60_days_relative_to_2_years`,\n`fraud_online_rolling_30_days_relative_to_all_frauds`,\n`fraud_card_present_rolling_30_days_relative_to_all_frauds`,\n`fraud_online_rolling_60_days_relative_to_all_frauds`,\n`fraud_card_present_rolling_60_days_relative_to_all_frauds`,\n`fraud_online_rolling_365_days_relative_to_all_frauds`,\n`fraud_card_present_rolling_365_days_relative_to_all_frauds`,\n`fraud_online_rolling_2_years_relative_to_all_frauds`,\n`fraud_card_present_rolling_2_years_relative_to_all_frauds`,\n`hour_sin`,\n`hour_cos`,\n`month_sin`,\n`month_cos`,\n`day_of_week_sin`,\n`day_of_week_cos`,\n`is_holiday`,\n`weekend`,\n`is_2015_or_later`,\n`mean_amount`,\n`mean_amount_last_year`,\n`mean_amount_last_30_days`,\n`mean_amount_last_7_days`,\n`mean_amount_last_2_days`,\n`mean_amount_last_1_days`,\n`mean_amount_last_7_days_relative_to_last_year`,\n`mean_amount_last_2_days_relative_to_last_year`,\n`mean_amount_last_1_days_relative_to_last_year`,\n`mean_amount_last_7_days_relative_to_last_30_days`,\n`mean_amount_last_2_days_relative_to_last_30_days`,\n`mean_amount_last_1_days_relative_to_last_30_days`,\n`transaction_count`,\n`days_since_first_transaction`,\n`transaction_frequency_all`,\n`transaction_frequency_last_year`,\n`transaction_frequency_last_30_days`,\n`transaction_frequency_last_7_days`,\n`transaction_frequency_last_2_days`,\n`transaction_frequency_last_1_days`,\n`1_days_transaction_frequency_relative_to_last_30_days`,\n`1_days_transaction_frequency_relative_to_last_year`,\n`2_days_transaction_frequency_relative_to_last_30_days`,\n`2_days_transaction_frequency_relative_to_last_year`,\n`7_days_transaction_frequency_relative_to_last_30_days`,\n`7_days_transaction_frequency_relative_to_last_year`,\n        is_fraud\n\n    FROM merged m\n\n    INNER JOIN mcc_aux mc\n        ON m.transaction_id = mc.transaction_id\n\n    INNER JOIN rolling_aux_amount_frequency raf\n        ON m.transaction_id = raf.transaction_id\n\n    INNER JOIN rolling_aux_frauds rf\n        ON m.transaction_id = rf.transaction_id\n)\n;"
+                    }
+                  }
+                },
+                "query_job_config": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{\"use_query_cache\": true}"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "Preprocess input data"
+            }
+          },
+          "execute-query-2": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-execute-query-2"
+            },
+            "dependentTasks": [
+              "execute-query",
+              "get-data-version"
+            ],
+            "inputs": {
+              "parameters": {
+                "bq_client_project_id": {
+                  "componentInputParameter": "project_id"
+                },
+                "dataset_location": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "europe-west2"
+                    }
+                  }
+                },
+                "pipelineparam--dataset_id": {
+                  "componentInputParameter": "dataset_id"
+                },
+                "pipelineparam--get-data-version-Output": {
+                  "taskOutputParameter": {
+                    "outputParameterKey": "Output",
+                    "producerTask": "get-data-version"
+                  }
+                },
+                "pipelineparam--project_id": {
+                  "componentInputParameter": "project_id"
+                },
+                "query": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "DECLARE train_limit INT64 DEFAULT (\n    SELECT APPROX_QUANTILES(datetime_unix_seconds, 100)[OFFSET(CAST(100 * (1 - 0.15 - 0.15) AS INT))] train_limit\n    FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.preprocessed`\n)\n;\n\nCREATE OR REPLACE TABLE `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.training` AS (\n    SELECT t.* EXCEPT(datetime_unix_seconds)\n\n    FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.preprocessed` t\n\n    WHERE t.datetime_unix_seconds < train_limit\n)\n;\n\nCREATE TEMP TABLE validation_testing AS (\n    SELECT t.* EXCEPT(datetime_unix_seconds)\n\n    FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.preprocessed` t\n\n    WHERE t.datetime_unix_seconds >= train_limit\n)\n;\n\nCREATE OR REPLACE TABLE `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.validation` AS (\n    SELECT t.*\n\n    FROM validation_testing t\n\n    WHERE ABS(MOD(t.transaction_id, 100)) < CAST(0.15 / (0.15 + 0.15) * 100 AS INT)\n)\n;\n\nCREATE OR REPLACE TABLE `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.testing` AS (\n    SELECT t.*\n\n    FROM validation_testing t\n\n    WHERE ABS(MOD(t.transaction_id, 100)) >= CAST(0.15 / (0.15 + 0.15) * 100 AS INT)\n)\n;"
+                    }
+                  }
+                },
+                "query_job_config": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{\"use_query_cache\": true}"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "Train / validation / test split"
+            }
+          },
+          "get-data-version": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-get-data-version"
+            },
+            "inputs": {
+              "parameters": {
+                "dataset_id": {
+                  "componentInputParameter": "dataset_id"
+                },
+                "dataset_location": {
+                  "componentInputParameter": "dataset_location"
+                },
+                "payload_data_version": {
+                  "componentInputParameter": "data_version"
+                },
+                "project_id": {
+                  "componentInputParameter": "project_id"
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "Get data version"
+            }
+          }
+        }
+      },
+      "inputDefinitions": {
+        "parameters": {
+          "data_version": {
+            "type": "STRING"
+          },
+          "dataset_id": {
+            "type": "STRING"
+          },
+          "dataset_location": {
+            "type": "STRING"
+          },
+          "pipeline_files_gcs_path": {
+            "type": "STRING"
+          },
+          "project_id": {
+            "type": "STRING"
+          },
+          "project_location": {
+            "type": "STRING"
+          }
+        }
+      }
+    },
+    "schemaVersion": "2.0.0",
+    "sdkVersion": "kfp-1.8.22"
+  },
+  "runtimeConfig": {}
+}

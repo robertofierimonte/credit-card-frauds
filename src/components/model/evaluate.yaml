@@ -1,0 +1,101 @@
+name: Evaluate model
+description: Evaluate a trained model on test data and report goodness metrics.
+inputs:
+- {name: test_data, type: Dataset, description: Evaluation data as a KFP Dataset object.}
+- {name: target_column, type: String, description: Column containing the target column
+    for classification.}
+- {name: model, type: Model, description: Input trained model as a KFP Model object.}
+outputs:
+- name: predictions
+  type: Dataset
+  description: |-
+    Model predictions including input columns
+    as a KFP Dataset object. This parameter will be passed automatically
+    by the orchestrator.
+- name: metrics
+  type: Metrics
+  description: |-
+    Output metrics for the trained model. This
+    parameter will be passed automatically by the orchestrator and it
+    can be referred to by clicking on the component's execution in
+    the pipeline.
+- name: metrics_artifact
+  type: Artifact
+  description: |-
+    Output metrics Artifact for the trained
+    model. This parameter will be passed automatically by the orchestrator.
+implementation:
+  container:
+    image: python:3.9
+    command:
+    - sh
+    - -c
+    - |2
+
+      if ! [ -x "$(command -v pip)" ]; then
+          python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip
+      fi
+
+      PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'scikit-learn==1.1.2' 'pandas==1.4.3' 'joblib==1.2.0' 'kfp==1.8.22' && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp -d)
+      printf "%s" "$0" > "$program_path/ephemeral_component.py"
+      python3 -m kfp.v2.components.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+    - |2+
+
+      import kfp
+      from kfp.v2 import dsl
+      from kfp.v2.dsl import *
+      from typing import *
+
+      def evaluate_model(
+          test_data: Input[Dataset],
+          target_column: str,
+          model: Input[Model],
+          predictions: Output[Dataset],
+          metrics: Output[Metrics],
+          metrics_artifact: Output[Artifact],
+      ) -> None:
+          """Evaluate a trained model on test data and report goodness metrics.
+
+          Args:
+              test_data (Input[Dataset]): Evaluation data as a KFP Dataset object.
+              target_column (str): Column containing the target column for classification.
+              model (Input[Model]): Input trained model as a KFP Model object.
+              predictions (Output[Dataset]): Model predictions including input columns
+                  as a KFP Dataset object. This parameter will be passed automatically
+                  by the orchestrator.
+              metrics (Output[Metrics]): Output metrics for the trained model. This
+                  parameter will be passed automatically by the orchestrator and it
+                  can be referred to by clicking on the component's execution in
+                  the pipeline.
+              metrics_artifact (Output[Artifact]): Output metrics Artifact for the trained
+                  model. This parameter will be passed automatically by the orchestrator.
+          """
+          import joblib
+          import pandas as pd
+          from sklearn.metrics import accuracy_score
+
+          dtc = joblib.load(model.path)
+
+          df_test = pd.read_csv(test_data.path)
+          y = df_test.pop(target_column)
+
+          preds = dtc.predict(df_test)
+          df_test["pred"] = preds
+
+          df_test.to_csv(predictions.path, index=False)
+
+          metrics_df = pd.DataFrame({"accuracy": [accuracy_score(y, preds)]})
+          metrics_df.to_csv(metrics_artifact.path)
+
+          for k, v in metrics_df.T[0].to_dict().items():
+              metrics.log_metric(k, v)
+
+    args:
+    - --executor_input
+    - {executorInput: null}
+    - --function_to_execute
+    - evaluate_model

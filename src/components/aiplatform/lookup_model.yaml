@@ -1,0 +1,118 @@
+name: Lookup model
+description: Fetch a Vertex AI model from the model registry given its name and version.
+inputs:
+- {name: model_name, type: String, description: The ID (name) of the model.}
+- {name: project_id, type: String, description: GCP Project ID where the model is
+    stored.}
+- {name: project_location, type: String, description: Location where the model is
+    stored.}
+- {name: model_label, type: String, description: Version alias of the model. Defaults
+    to None., optional: true}
+- name: fail_on_model_not_found
+  type: Boolean
+  description: |-
+    If set to True, raise an error
+    if the model is not found. Defaults to False.
+  default: "False"
+  optional: true
+outputs:
+- name: model
+  type: Model
+  description: |-
+    The fetched model as a KFP Model object. This
+    parameter will be passed automatically by the orchestrator.
+- {name: Output, type: String}
+implementation:
+  container:
+    image: python:3.9
+    command:
+    - sh
+    - -c
+    - |2
+
+      if ! [ -x "$(command -v pip)" ]; then
+          python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip
+      fi
+
+      PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-aiplatform==1.26.0' 'loguru==0.7.0' 'kfp==1.8.22' && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp -d)
+      printf "%s" "$0" > "$program_path/ephemeral_component.py"
+      python3 -m kfp.v2.components.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+    - |2+
+
+      import kfp
+      from kfp.v2 import dsl
+      from kfp.v2.dsl import *
+      from typing import *
+
+      def lookup_model(
+          model_name: str,
+          project_id: str,
+          project_location: str,
+          model: Output[Model],
+          model_label: str = None,
+          fail_on_model_not_found: bool = False,
+      ) -> str:
+          """Fetch a Vertex AI model from the model registry given its name and version.
+
+          Args:
+              model_name (str): The ID (name) of the model.
+              project_id (str): GCP Project ID where the model is stored.
+              project_location (str): Location where the model is stored.
+              model (Output[Model]): The fetched model as a KFP Model object. This
+                  parameter will be passed automatically by the orchestrator.
+              model_label (str, optional): Version alias of the model. Defaults to None.
+              fail_on_model_not_found (bool, optional): If set to True, raise an error
+                  if the model is not found. Defaults to False.
+
+          Raises:
+              RuntimeError: If the given model is not found and `fail_on_model_not_found`
+                  is True.
+
+          Returns:
+              str: Resource name of the fetched model. Empty string if a model is not
+                  found and `fail_on_model_not_found` is False
+          """
+          from google.api_core.exceptions import NotFound
+          from google.cloud.aiplatform import Model
+          from loguru import logger
+
+          model_resource_name = ""
+          try:
+              target_model = Model(
+                  model_name=model_name,
+                  project=project_id,
+                  location=project_location,
+                  version=model_label,
+              )
+              model_resource_name = target_model.resource_name
+              logger.info(
+                  f"Model display name: {target_model.display_name}, "
+                  f"model resource name: {model_resource_name}, "
+                  f"model URI: {target_model.uri}, "
+                  f"version id: {target_model.version_id}."
+              )
+              model.uri = model_resource_name
+              model.metadata["resourceName"] = model_resource_name
+
+          except NotFound:
+              model.uri = None
+              logger.warning(
+                  f"No model found with name {model_name} "
+                  f"(project {project_id}, location {project_location})."
+              )
+              if fail_on_model_not_found:
+                  msg = "Failed as model not found."
+                  logger.error(msg)
+                  raise RuntimeError(msg)
+
+          return model_resource_name
+
+    args:
+    - --executor_input
+    - {executorInput: null}
+    - --function_to_execute
+    - lookup_model

@@ -1,0 +1,87 @@
+name: Copy artifact
+description: Copy an Artifact from one location to another.
+inputs:
+- {name: source_artifact, type: Artifact, description: Source Artifact.}
+- name: dest_uri
+  type: String
+  description: |-
+    If provided, set destination URI of
+    copied Artifact. Defaults to None.
+  optional: true
+- name: dest_uri_suffix
+  type: String
+  description: |-
+    If provided, append a suffix
+    string to the destination URI. Defaults to None.
+  optional: true
+outputs:
+- {name: dest_artifact, type: Artifact, description: Destination Artifact.}
+implementation:
+  container:
+    image: python:3.9
+    command:
+    - sh
+    - -c
+    - |2
+
+      if ! [ -x "$(command -v pip)" ]; then
+          python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip
+      fi
+
+      PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'loguru==0.6.0' 'kfp==1.8.22' && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp -d)
+      printf "%s" "$0" > "$program_path/ephemeral_component.py"
+      python3 -m kfp.v2.components.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+    - |2+
+
+      import kfp
+      from kfp.v2 import dsl
+      from kfp.v2.dsl import *
+      from typing import *
+
+      def copy_artifact(
+          source_artifact: Input[Artifact],
+          dest_artifact: Output[Artifact],
+          dest_uri: Optional[str] = None,
+          dest_uri_suffix: Optional[str] = None,
+      ) -> None:
+          """Copy an Artifact from one location to another.
+
+          Args:
+              source_artifact (Input[Artifact]): Source Artifact.
+              dest_artifact (Output[Artifact]): Destination Artifact.
+              dest_uri (Optional[str], optional): If provided, set destination URI of
+                  copied Artifact. Defaults to None.
+              dest_uri_suffix (Optional[str], optional): If provided, append a suffix
+                  string to the destination URI. Defaults to None.
+          """
+          import shutil
+          from pathlib import Path
+
+          from loguru import logger
+
+          if dest_uri is not None:
+              if dest_uri_suffix is not None:
+                  dest_artifact.uri = dest_uri + "_" + dest_uri_suffix
+              else:
+                  dest_artifact.uri = dest_uri
+
+          # Ensure that the destination's parent folder(s) exist
+          Path(dest_artifact.path).parent.mkdir(parents=True, exist_ok=True)
+
+          # Copy the artifact
+          try:
+              shutil.copy(source_artifact.path, dest_artifact.path)
+              logger.info(f"Copied {source_artifact.path} to {dest_artifact.path}.")
+          except OSError as e:
+              logger.error(e)
+              raise e
+
+    args:
+    - --executor_input
+    - {executorInput: null}
+    - --function_to_execute
+    - copy_artifact
