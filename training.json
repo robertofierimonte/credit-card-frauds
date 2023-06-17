@@ -186,6 +186,630 @@
           }
         }
       },
+      "comp-exit-handler-1": {
+        "dag": {
+          "outputs": {
+            "artifacts": {
+              "train-evaluate-model-train_metrics": {
+                "artifactSelectors": [
+                  {
+                    "outputArtifactKey": "train-evaluate-model-train_metrics",
+                    "producerSubtask": "for-loop-2"
+                  }
+                ]
+              },
+              "train-evaluate-model-valid_metrics": {
+                "artifactSelectors": [
+                  {
+                    "outputArtifactKey": "train-evaluate-model-valid_metrics",
+                    "producerSubtask": "for-loop-2"
+                  }
+                ]
+              }
+            }
+          },
+          "tasks": {
+            "bq-table-to-dataset": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-bq-table-to-dataset"
+              },
+              "dependentTasks": [
+                "execute-query-2",
+                "get-data-version"
+              ],
+              "inputs": {
+                "parameters": {
+                  "bq_client_project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "dataset_id": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}"
+                      }
+                    }
+                  },
+                  "dataset_location": {
+                    "componentInputParameter": "pipelineparam--dataset_location"
+                  },
+                  "extract_job_config": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{\"destination_format\": \"PARQUET\"}"
+                      }
+                    }
+                  },
+                  "file_pattern": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "file_*"
+                      }
+                    }
+                  },
+                  "pipelineparam--dataset_id": {
+                    "componentInputParameter": "pipelineparam--dataset_id"
+                  },
+                  "pipelineparam--get-data-version-Output": {
+                    "taskOutputParameter": {
+                      "outputParameterKey": "Output",
+                      "producerTask": "get-data-version"
+                    }
+                  },
+                  "skip_if_exists": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "True"
+                      }
+                    }
+                  },
+                  "source_project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "table_name": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "training"
+                      }
+                    }
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "Extract training data"
+              }
+            },
+            "bq-table-to-dataset-2": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-bq-table-to-dataset-2"
+              },
+              "dependentTasks": [
+                "execute-query-2",
+                "get-data-version"
+              ],
+              "inputs": {
+                "parameters": {
+                  "bq_client_project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "dataset_id": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}"
+                      }
+                    }
+                  },
+                  "dataset_location": {
+                    "componentInputParameter": "pipelineparam--dataset_location"
+                  },
+                  "extract_job_config": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{\"destination_format\": \"PARQUET\"}"
+                      }
+                    }
+                  },
+                  "file_pattern": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "file_*"
+                      }
+                    }
+                  },
+                  "pipelineparam--dataset_id": {
+                    "componentInputParameter": "pipelineparam--dataset_id"
+                  },
+                  "pipelineparam--get-data-version-Output": {
+                    "taskOutputParameter": {
+                      "outputParameterKey": "Output",
+                      "producerTask": "get-data-version"
+                    }
+                  },
+                  "skip_if_exists": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "True"
+                      }
+                    }
+                  },
+                  "source_project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "table_name": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "validation"
+                      }
+                    }
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "Extract validation data"
+              }
+            },
+            "bq-table-to-dataset-3": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-bq-table-to-dataset-3"
+              },
+              "dependentTasks": [
+                "execute-query-2",
+                "get-data-version"
+              ],
+              "inputs": {
+                "parameters": {
+                  "bq_client_project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "dataset_id": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}"
+                      }
+                    }
+                  },
+                  "dataset_location": {
+                    "componentInputParameter": "pipelineparam--dataset_location"
+                  },
+                  "extract_job_config": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{\"destination_format\": \"PARQUET\"}"
+                      }
+                    }
+                  },
+                  "file_pattern": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "file_*"
+                      }
+                    }
+                  },
+                  "pipelineparam--dataset_id": {
+                    "componentInputParameter": "pipelineparam--dataset_id"
+                  },
+                  "pipelineparam--get-data-version-Output": {
+                    "taskOutputParameter": {
+                      "outputParameterKey": "Output",
+                      "producerTask": "get-data-version"
+                    }
+                  },
+                  "skip_if_exists": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "True"
+                      }
+                    }
+                  },
+                  "source_project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "table_name": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "testing"
+                      }
+                    }
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "Extract test data"
+              }
+            },
+            "execute-query": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-execute-query"
+              },
+              "dependentTasks": [
+                "get-data-version"
+              ],
+              "inputs": {
+                "parameters": {
+                  "bq_client_project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "dataset_location": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "europe-west2"
+                      }
+                    }
+                  },
+                  "pipelineparam--dataset_id": {
+                    "componentInputParameter": "pipelineparam--dataset_id"
+                  },
+                  "pipelineparam--get-data-version-Output": {
+                    "taskOutputParameter": {
+                      "outputParameterKey": "Output",
+                      "producerTask": "get-data-version"
+                    }
+                  },
+                  "pipelineparam--project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "query": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "CREATE TEMP TABLE merged\nCLUSTER BY mcc, datetime_unix_seconds\nAS (\n    WITH transactions AS (\n        /* Features related to transactions */\n        SELECT\n            ROW_NUMBER() OVER() AS transaction_id,\n            DATETIME(t.year, t.month, t.day, CAST(SUBSTR(t.time, 1, 2) AS INT), CAST(SUBSTR(t.time, 4, 2) AS INT), 0) AS datetime,\n            t.year,\n            SIN((CAST(SUBSTR(t.time, 1, 2) AS INT) / 24) * 2 * ACOS(-1)) AS hour_sin,\n            COS((CAST(SUBSTR(t.time, 1, 2) AS INT) / 24) * 2 * ACOS(-1)) AS hour_cos,\n            SIN(((t.month - 1) / 12) * 2 * ACOS(-1)) AS month_sin,\n            COS(((t.month - 1) / 12) * 2 * ACOS(-1)) AS month_cos,\n            IF(t.year >= 2015, 1, 0) AS is_2015_or_later,\n            t.amount,\n            IF(t.use_chip = \"Chip Transaction\", 1, 0) AS chip_transaction,\n            IF(t.use_chip = \"Swipe Transaction\", 1, 0) AS swipe_transaction,\n            IF(t.use_chip = \"Online Transaction\", 1, 0) AS online_transaction,\n            IF(t.use_chip = \"Chip Transaction\" OR t.use_chip = \"Swipe Transaction\", 1, 0) AS card_present_transaction,\n            t.card,\n            t.user,\n            t.mcc,\n            CAST(t.Is_Fraud_ AS INT) AS is_fraud\n\n        FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.transactions` t\n    )\n\n    , users AS (\n        /* Features related to users */\n        SELECT\n            u.user,\n            IF(u.gender = \"Male\", 0, 1) AS gender,\n            CAST(REPLACE(u.`Per Capita Income - Zipcode`, \"$\", \"\") AS NUMERIC) AS per_capita_income_zipcode,\n            CAST(REPLACE(u.`Yearly Income - Person`, \"$\", \"\") AS NUMERIC) AS yearly_income_person,\n            CAST(REPLACE(u.`Total Debt`, \"$\", \"\") AS NUMERIC) AS total_debt,\n\n        FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.users` u\n    )\n\n    , cards AS (\n        /* Features related to cards */\n        SELECT\n            user,\n            card_index,\n            IF(card_brand = \"Amex\", 1, 0) AS amex,\n            IF(card_brand = \"Discover\", 1, 0) AS discover,\n            IF(card_brand = \"Mastercard\", 1, 0) AS mastercard,\n            IF(card_brand = \"Visa\", 1, 0) AS visa,\n            IF(card_type = \"Credit\", 1, 0) AS credit,\n            IF(card_type = \"Debit\", 1, 0) AS debit,\n            IF(card_type = \"Debit (Prepaid)\", 1, 0) AS debit_prepaid,\n            credit_limit,\n            IF(has_chip IS TRUE, 1, 0) AS has_chip,\n            IF(card_on_dark_web IS TRUE, 1, 0) AS card_on_dark_web,\n\n        FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.cards`\n    )\n\n    /* Merging all features together */\n    SELECT\n        t.transaction_id,\n        t.datetime,\n        t.year,\n        UNIX_SECONDS(CAST(t.datetime AS TIMESTAMP)) AS datetime_unix_seconds,\n        t.hour_sin,\n        t.hour_cos,\n        t.month_sin,\n        t.month_cos,\n        EXTRACT(DAYOFWEEK FROM t.datetime) AS day_of_week,\n        IF(EXTRACT(DAYOFWEEK FROM t.datetime) IN (1, 7), 1, 0) AS weekend,\n        IF(EXTRACT(DATE FROM t.datetime) IN (SELECT date FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.holidays`), 1, 0) AS is_holiday,\n        SIN((IF(EXTRACT(DAYOFWEEK FROM t.datetime) = 1, 6, EXTRACT(DAYOFWEEK FROM t.datetime) - 2) / 7) * 2 * ACOS(-1)) AS day_of_week_sin,\n        COS((IF(EXTRACT(DAYOFWEEK FROM t.datetime) = 1, 6, EXTRACT(DAYOFWEEK FROM t.datetime) - 2) / 7) * 2 * ACOS(-1)) AS day_of_week_cos,\n        t.is_2015_or_later,\n        t.amount,\n        t.swipe_transaction,\n        t.chip_transaction,\n        t.online_transaction,\n        t.card_present_transaction,\n        IF(t.is_fraud = 1 AND t.chip_transaction = 1, 1, 0) AS fraud_chip,\n        IF(t.is_fraud = 1 AND t.swipe_transaction = 1, 1, 0) AS fraud_swipe,\n        IF(t.is_fraud = 1 AND t.online_transaction = 1, 1, 0) AS fraud_online,\n        IF(t.is_fraud = 1 AND t.card_present_transaction = 1, 1, 0) AS fraud_card_present,\n        t.user,\n        t.mcc,\n        u.gender,\n        c.amex,\n        c.discover,\n        c.mastercard,\n        c.visa,\n        c.credit,\n        c.debit,\n        c.debit_prepaid,\n        c.credit_limit,\n        c.has_chip,\n        c.card_on_dark_web,\n        u.per_capita_income_zipcode,\n        u.yearly_income_person,\n        u.total_debt,\n        t.is_fraud,\n\n    FROM transactions t\n\n    INNER JOIN cards c\n        ON t.card = c.card_index\n        AND t.user = c.user\n\n    INNER JOIN users u\n        ON t.user = u.user\n)\n;\n\nCREATE TEMP TABLE mcc_aux AS (\n    /* Rolling features related to MCC */\n    SELECT\n        m.transaction_id,\n        COALESCE(SUM(m.is_fraud) OVER(mcc_window) / COUNT(m.is_fraud) OVER(mcc_window), 0) AS mcc_mean_encoding\n\n    FROM merged m\n    WINDOW mcc_window AS (PARTITION BY m.mcc ORDER BY m.datetime_unix_seconds RANGE BETWEEN UNBOUNDED PRECEDING AND 604800 PRECEDING)\n)\n;\n\nCREATE TEMP TABLE user_aux\nCLUSTER BY user, datetime_unix_seconds\n/* Rolling features related to users */\nAS (\n    SELECT\n        m.*,\n        COALESCE(AVG(m.amount) OVER(user_window), 0) AS mean_amount,\n        COUNT(m.transaction_id) OVER(user_window) AS transaction_count,\n        DATE_DIFF(m.datetime, MIN(m.datetime) OVER(PARTITION BY m.user), DAY) AS days_since_first_transaction,\n\n    FROM merged m\n    WINDOW user_window AS (PARTITION BY m.user ORDER BY m.datetime ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING)\n)\n;\n\nCREATE TEMP TABLE rolling_aux_amount_frequency AS (\n    /* Rolling features related to transaction amount and frquency */\n    WITH tmp AS (\n        SELECT\n            r.*,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 86400 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_1_days,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 172800 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_2_days,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 604800 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_7_days,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_30_days,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_year,\n            IF(\n                r.days_since_first_transaction > 0,\n                (r.transaction_count - 1) / r.days_since_first_transaction,\n                0\n            ) AS transaction_frequency_all,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 86400 PRECEDING AND 1 PRECEDING)\n                    / LEAST(1, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_1_days,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 172800 PRECEDING AND 1 PRECEDING)\n                    / LEAST(2, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_2_days,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 604800 PRECEDING AND 1 PRECEDING)\n                    / LEAST(7, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_7_days,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 1 PRECEDING)\n                    / LEAST(30, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_30_days,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 1 PRECEDING)\n                    / LEAST(365, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_year\n\n        FROM user_aux r\n    )\n    SELECT\n        t.transaction_id,\n        t.mean_amount,\n        t.transaction_count,\n        days_since_first_transaction,\n        mean_amount_last_year,\n        mean_amount_last_30_days,\n        mean_amount_last_7_days,\n        mean_amount_last_2_days,\n        mean_amount_last_1_days,\n        transaction_frequency_all,\n        transaction_frequency_last_year,\n        transaction_frequency_last_30_days,\n        transaction_frequency_last_7_days,\n        transaction_frequency_last_2_days,\n        transaction_frequency_last_1_days,\n\n        COALESCE(SAFE_DIVIDE(mean_amount_last_7_days, mean_amount_last_year), 0) AS mean_amount_last_7_days_relative_to_last_year,\n        COALESCE(SAFE_DIVIDE(mean_amount_last_2_days, mean_amount_last_year), 0) AS mean_amount_last_2_days_relative_to_last_year,\n        COALESCE(SAFE_DIVIDE(mean_amount_last_1_days, mean_amount_last_year), 0) AS mean_amount_last_1_days_relative_to_last_year,\n\n        COALESCE(SAFE_DIVIDE(mean_amount_last_7_days, mean_amount_last_30_days), 0) AS mean_amount_last_7_days_relative_to_last_30_days,\n        COALESCE(SAFE_DIVIDE(mean_amount_last_2_days, mean_amount_last_30_days), 0) AS mean_amount_last_2_days_relative_to_last_30_days,\n        COALESCE(SAFE_DIVIDE(mean_amount_last_1_days, mean_amount_last_30_days), 0) AS mean_amount_last_1_days_relative_to_last_30_days,\n\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_7_days, transaction_frequency_last_year), 0) AS `7_days_transaction_frequency_relative_to_last_year`,\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_2_days, transaction_frequency_last_year), 0) AS `2_days_transaction_frequency_relative_to_last_year`,\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_1_days, transaction_frequency_last_year), 0) AS `1_days_transaction_frequency_relative_to_last_year`,\n\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_7_days, transaction_frequency_last_30_days), 0) AS `7_days_transaction_frequency_relative_to_last_30_days`,\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_2_days, transaction_frequency_last_30_days), 0) AS `2_days_transaction_frequency_relative_to_last_30_days`,\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_1_days, transaction_frequency_last_30_days), 0) AS `1_days_transaction_frequency_relative_to_last_30_days`,\n\n    FROM tmp t\n)\n;\n\nCREATE TEMP TABLE rolling_aux_frauds\n/* Rolling features related to amount of frauds */\nAS (\n    WITH tmp1 AS (\n        SELECT\n            m.transaction_id,\n            m.year,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_2_years,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_365_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_60_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_30_days,\n\n        FROM merged m\n\n        WHERE m.year <= 2000\n    )\n\n    , tmp2 AS (\n        SELECT\n            m.transaction_id,\n            m.year,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_2_years,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_365_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_60_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_30_days,\n\n        FROM merged m\n\n        WHERE m.year BETWEEN 1998 AND 2010\n    )\n\n    , tmp3 AS (\n        SELECT\n            m.transaction_id,\n            m.year,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_2_years,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_365_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_60_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_30_days,\n\n        FROM merged m\n\n        WHERE m.year BETWEEN 2008 AND 2015\n    )\n\n    , tmp4 AS (\n        SELECT\n            m.transaction_id,\n            m.year,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_2_years,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_365_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_60_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_30_days,\n\n        FROM merged m\n\n        WHERE m.year >= 2013\n    )\n\n    , all_years AS (\n        SELECT * EXCEPT(year) FROM tmp1\n\n        UNION ALL\n\n        SELECT * EXCEPT(year) FROM tmp2 WHERE year BETWEEN 2001 AND 2010\n\n        UNION ALL\n\n        SELECT * EXCEPT(year) FROM tmp3 WHERE year BETWEEN 2011 AND 2015\n\n        UNION ALL\n\n        SELECT * EXCEPT(year) FROM tmp4 WHERE year >= 2016\n    )\n\n    SELECT\n        a.*,\n        COALESCE(SAFE_DIVIDE(fraud_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_swipe_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_swipe_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_swipe_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_swipe_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_chip_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_chip_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_chip_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_chip_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_online_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_online_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_online_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_online_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_card_present_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_card_present_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_card_present_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_card_present_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_30_days, fraud_rolling_mean_30_days), 0) AS fraud_swipe_rolling_30_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_30_days, fraud_rolling_mean_30_days), 0) AS fraud_chip_rolling_30_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_30_days, fraud_rolling_mean_30_days), 0) AS fraud_online_rolling_30_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_30_days, fraud_rolling_mean_30_days), 0) AS fraud_card_present_rolling_30_days_relative_to_all_frauds,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_60_days, fraud_rolling_mean_60_days), 0) AS fraud_swipe_rolling_60_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_60_days, fraud_rolling_mean_60_days), 0) AS fraud_chip_rolling_60_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_60_days, fraud_rolling_mean_60_days), 0) AS fraud_online_rolling_60_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_60_days, fraud_rolling_mean_60_days), 0) AS fraud_card_present_rolling_60_days_relative_to_all_frauds,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_365_days, fraud_rolling_mean_365_days), 0) AS fraud_swipe_rolling_365_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_365_days, fraud_rolling_mean_365_days), 0) AS fraud_chip_rolling_365_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_365_days, fraud_rolling_mean_365_days), 0) AS fraud_online_rolling_365_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_365_days, fraud_rolling_mean_365_days), 0) AS fraud_card_present_rolling_365_days_relative_to_all_frauds,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_2_years, fraud_rolling_mean_2_years), 0) AS fraud_swipe_rolling_2_years_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_2_years, fraud_rolling_mean_2_years), 0) AS fraud_chip_rolling_2_years_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_2_years, fraud_rolling_mean_2_years), 0) AS fraud_online_rolling_2_years_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_2_years, fraud_rolling_mean_2_years), 0) AS fraud_card_present_rolling_2_years_relative_to_all_frauds,\n\n    FROM all_years a\n)\n;\n\nCREATE OR REPLACE TABLE `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.preprocessed`\nCLUSTER BY datetime_unix_seconds\nAS (\n    SELECT\n        m.transaction_id,\n        m.datetime_unix_seconds,\n        `amount`,\n`has_chip`,\n`gender`,\n`online_transaction`,\n`amex`,\n`discover`,\n`mastercard`,\n`visa`,\n`credit`,\n`debit`,\n`debit_prepaid`,\n`mcc_mean_encoding`,\n`card_present_transaction`,\n`fraud_rolling_mean_30_days`,\n`fraud_rolling_mean_60_days`,\n`fraud_rolling_mean_365_days`,\n`fraud_rolling_mean_2_years`,\n`fraud_online_rolling_mean_30_days`,\n`fraud_online_rolling_mean_60_days`,\n`fraud_online_rolling_mean_365_days`,\n`fraud_online_rolling_mean_2_years`,\n`fraud_card_present_rolling_mean_30_days`,\n`fraud_card_present_rolling_mean_60_days`,\n`fraud_card_present_rolling_mean_365_days`,\n`fraud_card_present_rolling_mean_2_years`,\n`fraud_rolling_30_days_relative_to_365_days`,\n`fraud_rolling_30_days_relative_to_2_years`,\n`fraud_rolling_60_days_relative_to_365_days`,\n`fraud_rolling_60_days_relative_to_2_years`,\n`fraud_online_rolling_30_days_relative_to_365_days`,\n`fraud_online_rolling_30_days_relative_to_2_years`,\n`fraud_online_rolling_60_days_relative_to_365_days`,\n`fraud_online_rolling_60_days_relative_to_2_years`,\n`fraud_card_present_rolling_30_days_relative_to_365_days`,\n`fraud_card_present_rolling_30_days_relative_to_2_years`,\n`fraud_card_present_rolling_60_days_relative_to_365_days`,\n`fraud_card_present_rolling_60_days_relative_to_2_years`,\n`fraud_online_rolling_30_days_relative_to_all_frauds`,\n`fraud_card_present_rolling_30_days_relative_to_all_frauds`,\n`fraud_online_rolling_60_days_relative_to_all_frauds`,\n`fraud_card_present_rolling_60_days_relative_to_all_frauds`,\n`fraud_online_rolling_365_days_relative_to_all_frauds`,\n`fraud_card_present_rolling_365_days_relative_to_all_frauds`,\n`fraud_online_rolling_2_years_relative_to_all_frauds`,\n`fraud_card_present_rolling_2_years_relative_to_all_frauds`,\n`hour_sin`,\n`hour_cos`,\n`month_sin`,\n`month_cos`,\n`day_of_week_sin`,\n`day_of_week_cos`,\n`is_holiday`,\n`weekend`,\n`is_2015_or_later`,\n`mean_amount`,\n`mean_amount_last_year`,\n`mean_amount_last_30_days`,\n`mean_amount_last_7_days`,\n`mean_amount_last_2_days`,\n`mean_amount_last_1_days`,\n`mean_amount_last_7_days_relative_to_last_year`,\n`mean_amount_last_2_days_relative_to_last_year`,\n`mean_amount_last_1_days_relative_to_last_year`,\n`mean_amount_last_7_days_relative_to_last_30_days`,\n`mean_amount_last_2_days_relative_to_last_30_days`,\n`mean_amount_last_1_days_relative_to_last_30_days`,\n`transaction_count`,\n`days_since_first_transaction`,\n`transaction_frequency_all`,\n`transaction_frequency_last_year`,\n`transaction_frequency_last_30_days`,\n`transaction_frequency_last_7_days`,\n`transaction_frequency_last_2_days`,\n`transaction_frequency_last_1_days`,\n`1_days_transaction_frequency_relative_to_last_30_days`,\n`1_days_transaction_frequency_relative_to_last_year`,\n`2_days_transaction_frequency_relative_to_last_30_days`,\n`2_days_transaction_frequency_relative_to_last_year`,\n`7_days_transaction_frequency_relative_to_last_30_days`,\n`7_days_transaction_frequency_relative_to_last_year`,\n        is_fraud\n\n    FROM merged m\n\n    INNER JOIN mcc_aux mc\n        ON m.transaction_id = mc.transaction_id\n\n    INNER JOIN rolling_aux_amount_frequency raf\n        ON m.transaction_id = raf.transaction_id\n\n    INNER JOIN rolling_aux_frauds rf\n        ON m.transaction_id = rf.transaction_id\n)\n;"
+                      }
+                    }
+                  },
+                  "query_job_config": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{\"use_query_cache\": true}"
+                      }
+                    }
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "Preprocess input data"
+              }
+            },
+            "execute-query-2": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-execute-query-2"
+              },
+              "dependentTasks": [
+                "execute-query",
+                "get-data-version"
+              ],
+              "inputs": {
+                "parameters": {
+                  "bq_client_project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "dataset_location": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "europe-west2"
+                      }
+                    }
+                  },
+                  "pipelineparam--dataset_id": {
+                    "componentInputParameter": "pipelineparam--dataset_id"
+                  },
+                  "pipelineparam--get-data-version-Output": {
+                    "taskOutputParameter": {
+                      "outputParameterKey": "Output",
+                      "producerTask": "get-data-version"
+                    }
+                  },
+                  "pipelineparam--project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "query": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "DECLARE train_limit INT64 DEFAULT (\n    SELECT APPROX_QUANTILES(datetime_unix_seconds, 100)[OFFSET(CAST(100 * (1 - 0.15 - 0.15) AS INT))] train_limit\n    FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.preprocessed`\n)\n;\n\nCREATE OR REPLACE TABLE `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.training` AS (\n    SELECT t.* EXCEPT(datetime_unix_seconds)\n\n    FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.preprocessed` t\n\n    WHERE t.datetime_unix_seconds < train_limit\n)\n;\n\nCREATE TEMP TABLE validation_testing AS (\n    SELECT t.* EXCEPT(datetime_unix_seconds)\n\n    FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.preprocessed` t\n\n    WHERE t.datetime_unix_seconds >= train_limit\n)\n;\n\nCREATE OR REPLACE TABLE `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.validation` AS (\n    SELECT t.*\n\n    FROM validation_testing t\n\n    WHERE ABS(MOD(t.transaction_id, 100)) < CAST(0.15 / (0.15 + 0.15) * 100 AS INT)\n)\n;\n\nCREATE OR REPLACE TABLE `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.testing` AS (\n    SELECT t.*\n\n    FROM validation_testing t\n\n    WHERE ABS(MOD(t.transaction_id, 100)) >= CAST(0.15 / (0.15 + 0.15) * 100 AS INT)\n)\n;"
+                      }
+                    }
+                  },
+                  "query_job_config": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{\"use_query_cache\": true}"
+                      }
+                    }
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "Train / validation / test split"
+              }
+            },
+            "for-loop-2": {
+              "componentRef": {
+                "name": "comp-for-loop-2"
+              },
+              "dependentTasks": [
+                "bq-table-to-dataset",
+                "bq-table-to-dataset-2"
+              ],
+              "inputs": {
+                "artifacts": {
+                  "pipelineparam--bq-table-to-dataset-2-dataset": {
+                    "taskOutputArtifact": {
+                      "outputArtifactKey": "dataset",
+                      "producerTask": "bq-table-to-dataset-2"
+                    }
+                  },
+                  "pipelineparam--bq-table-to-dataset-dataset": {
+                    "taskOutputArtifact": {
+                      "outputArtifactKey": "dataset",
+                      "producerTask": "bq-table-to-dataset"
+                    }
+                  }
+                },
+                "parameters": {
+                  "pipelineparam--models": {
+                    "componentInputParameter": "pipelineparam--models"
+                  },
+                  "pipelineparam--project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "pipelineparam--project_location": {
+                    "componentInputParameter": "pipelineparam--project_location"
+                  }
+                }
+              },
+              "iteratorPolicy": {
+                "parallelismLimit": 1.0
+              },
+              "parameterIterator": {
+                "itemInput": "pipelineparam--models-loop-item",
+                "items": {
+                  "inputParameter": "pipelineparam--models"
+                }
+              },
+              "taskInfo": {
+                "name": "for-loop-2"
+              }
+            },
+            "get-data-version": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-get-data-version"
+              },
+              "inputs": {
+                "parameters": {
+                  "dataset_id": {
+                    "componentInputParameter": "pipelineparam--dataset_id"
+                  },
+                  "dataset_location": {
+                    "componentInputParameter": "pipelineparam--dataset_location"
+                  },
+                  "payload_data_version": {
+                    "componentInputParameter": "pipelineparam--data_version"
+                  },
+                  "project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "Get data version"
+              }
+            }
+          }
+        },
+        "inputDefinitions": {
+          "parameters": {
+            "pipelineparam--data_version": {
+              "type": "STRING"
+            },
+            "pipelineparam--dataset_id": {
+              "type": "STRING"
+            },
+            "pipelineparam--dataset_location": {
+              "type": "STRING"
+            },
+            "pipelineparam--models": {
+              "type": "STRING"
+            },
+            "pipelineparam--project_id": {
+              "type": "STRING"
+            },
+            "pipelineparam--project_location": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "train-evaluate-model-train_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "train-evaluate-model-valid_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          }
+        }
+      },
+      "comp-for-loop-2": {
+        "dag": {
+          "outputs": {
+            "artifacts": {
+              "train-evaluate-model-train_metrics": {
+                "artifactSelectors": [
+                  {
+                    "outputArtifactKey": "train_metrics",
+                    "producerSubtask": "train-evaluate-model"
+                  }
+                ]
+              },
+              "train-evaluate-model-valid_metrics": {
+                "artifactSelectors": [
+                  {
+                    "outputArtifactKey": "valid_metrics",
+                    "producerSubtask": "train-evaluate-model"
+                  }
+                ]
+              }
+            }
+          },
+          "tasks": {
+            "train-evaluate-model": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-train-evaluate-model"
+              },
+              "inputs": {
+                "artifacts": {
+                  "training_data": {
+                    "componentInputArtifact": "pipelineparam--bq-table-to-dataset-dataset"
+                  },
+                  "validation_data": {
+                    "componentInputArtifact": "pipelineparam--bq-table-to-dataset-2-dataset"
+                  }
+                },
+                "parameters": {
+                  "base_output_directory": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  },
+                  "data_processing_args": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{\"data_sampling\": \"rose\", \"rose_shrinkage\": 0.5, \"rose_upsampled_minority_proportion\": 0.3}"
+                      }
+                    }
+                  },
+                  "fit_args": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{\"xgboost\": {\"verbose\": 0}}"
+                      }
+                    }
+                  },
+                  "location": {
+                    "componentInputParameter": "pipelineparam--project_location"
+                  },
+                  "model_name": {
+                    "componentInputParameter": "pipelineparam--models-loop-item"
+                  },
+                  "models_params": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{\"logistic_regression\": {\"max_iter\": 500}, \"sgd_classifier\": {\"loss\": \"modified_huber\"}, \"xgboost\": {\"eval_metric\": \"logloss\", \"scale_pos_weight\": 10, \"verbosity\": 0}, \"lightgbm\": {\"verbosity\": 0, \"is_unbalance\": true}}"
+                      }
+                    }
+                  },
+                  "network": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  },
+                  "project": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "service_account": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  },
+                  "target_column": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "is_fraud"
+                      }
+                    }
+                  },
+                  "tensorboard": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "Train and evaluate models"
+              }
+            }
+          }
+        },
+        "inputDefinitions": {
+          "artifacts": {
+            "pipelineparam--bq-table-to-dataset-2-dataset": {
+              "artifactType": {
+                "schemaTitle": "system.Dataset",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "pipelineparam--bq-table-to-dataset-dataset": {
+              "artifactType": {
+                "schemaTitle": "system.Dataset",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "pipelineparam--models": {
+              "type": "STRING"
+            },
+            "pipelineparam--models-loop-item": {
+              "type": "STRING"
+            },
+            "pipelineparam--project_id": {
+              "type": "STRING"
+            },
+            "pipelineparam--project_location": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "train-evaluate-model-train_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "train-evaluate-model-valid_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          }
+        }
+      },
       "comp-get-data-version": {
         "executorLabel": "exec-get-data-version",
         "inputDefinitions": {
@@ -207,6 +831,100 @@
         "outputDefinitions": {
           "parameters": {
             "Output": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-train-evaluate-model": {
+        "executorLabel": "exec-train-evaluate-model",
+        "inputDefinitions": {
+          "artifacts": {
+            "training_data": {
+              "artifactType": {
+                "schemaTitle": "system.Dataset",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "validation_data": {
+              "artifactType": {
+                "schemaTitle": "system.Dataset",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "base_output_directory": {
+              "type": "STRING"
+            },
+            "data_processing_args": {
+              "type": "STRING"
+            },
+            "fit_args": {
+              "type": "STRING"
+            },
+            "location": {
+              "type": "STRING"
+            },
+            "model_name": {
+              "type": "STRING"
+            },
+            "models_params": {
+              "type": "STRING"
+            },
+            "network": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            },
+            "service_account": {
+              "type": "STRING"
+            },
+            "target_column": {
+              "type": "STRING"
+            },
+            "tensorboard": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "model": {
+              "artifactType": {
+                "schemaTitle": "system.Model",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "train_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "valid_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "gcp_resources": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-vertex-pipelines-notification-email": {
+        "executorLabel": "exec-vertex-pipelines-notification-email",
+        "inputDefinitions": {
+          "parameters": {
+            "pipeline_task_final_status": {
+              "type": "STRING"
+            },
+            "recipients": {
               "type": "STRING"
             }
           }
@@ -334,6 +1052,46 @@
             ],
             "image": "python:3.9"
           }
+        },
+        "exec-train-evaluate-model": {
+          "container": {
+            "args": [
+              "--type",
+              "CustomJob",
+              "--payload",
+              "{\"display_name\": \"Train evaluate model\", \"job_spec\": {\"worker_pool_specs\": [{\"machine_spec\": {\"machine_type\": \"n1-standard-32\"}, \"replica_count\": 1, \"container_spec\": {\"image_uri\": \"europe-west2-docker.pkg.dev/robertofierimonte-ml-pipe/docker-repo/credit-card-frauds:latest\", \"command\": [\"sh\", \"-c\", \"\\nif ! [ -x \\\"$(command -v pip)\\\" ]; then\\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\\nfi\\n\\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.22' && \\\"$0\\\" \\\"$@\\\"\\n\", \"sh\", \"-ec\", \"program_path=$(mktemp -d)\\nprintf \\\"%s\\\" \\\"$0\\\" > \\\"$program_path/ephemeral_component.py\\\"\\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \\\"$program_path/ephemeral_component.py\\\"                         \\\"$@\\\"\\n\", \"\\nimport kfp\\nfrom kfp.v2 import dsl\\nfrom kfp.v2.dsl import *\\nfrom typing import *\\n\\ndef train_evaluate_model(\\n    training_data: Input[Dataset],\\n    validation_data: Input[Dataset],\\n    target_column: str,\\n    model_name: str,\\n    train_metrics: Output[Metrics],\\n    valid_metrics: Output[Metrics],\\n    model: Output[Model],\\n    models_params: dict = {},\\n    fit_args: dict = {},\\n    data_processing_args: dict = {},\\n) -> None:\\n    \\\"\\\"\\\"Train a classification model on the training data.\\n\\n    Args:\\n        training_data (Input[Dataset]): Training data as a KFP Dataset object.\\n        validation_data (Input[Dataset]): Validation data (used to prevent overfitting)\\n            as a KFP Dataset object.\\n        target_column (str): Column containing the target column for classification.\\n        model_name (str): Name of the classifier that will be trained. Must be one of\\n            'logistic_regression', 'sgd_classifier', 'random_forest', 'lightgbm',\\n            'xgboost'.\\n        models_params (dict): Hyperparameters of the model. Default to an empty dict.\\n        fit_args (dict): Arguments used when fitting the model.\\n            Default to an empty dict.\\n        data_processing_args (dict): Arguments used when running extra processing on\\n            the data (such as scaling or oversampling). Default to an empty dict.\\n        train_metrics (Output[Metrics]):\\n        valid_metrics (Output[Metrics]):\\n        model (Output[Model]): Output model as a KFP Model object, this parameter\\n            will be passed automatically by the orchestrator. The .path\\n            attribute is the location of the joblib file in GCS.\\n    \\\"\\\"\\\"\\n    import os\\n    from pathlib import Path\\n\\n    import joblib\\n    import pandas as pd\\n    from lightgbm import LGBMClassifier\\n    from loguru import logger\\n    from sklearn.ensemble import RandomForestClassifier\\n    from sklearn.linear_model import LogisticRegression, SGDClassifier\\n    from xgboost import XGBClassifier\\n\\n    from src.base.model import evaluate_model, train_model\\n\\n    df_train = pd.read_parquet(training_data.path)\\n    df_train = df_train.drop(columns=[\\\"transaction_id\\\"])\\n    y_train = df_train.pop(target_column)\\n    logger.info(f\\\"Loaded training data, shape {df_train.shape}.\\\")\\n\\n    df_valid = pd.read_parquet(validation_data.path)\\n    df_valid = df_valid.drop(columns=[\\\"transaction_id\\\"])\\n    y_valid = df_valid.pop(target_column)\\n    logger.info(f\\\"Loaded evaluation data, shape {df_valid.shape}.\\\")\\n\\n    use_eval_set = False\\n    model_params = models_params.get(model_name, {})\\n    if model_name == \\\"logistic_regression\\\":\\n        classifier = LogisticRegression(random_state=42, **model_params)\\n    elif model_name == \\\"sgd_classifier\\\":\\n        classifier = SGDClassifier(random_state=42, **model_params)\\n    elif model_name == \\\"random_forest\\\":\\n        classifier = RandomForestClassifier(random_state=42, **model_params)\\n    elif model_name == \\\"lightgbm\\\":\\n        classifier = LGBMClassifier(random_state=42, **model_params)\\n        use_eval_set = True\\n    elif model_name == \\\"xgboost\\\":\\n        classifier = XGBClassifier(\\n            use_label_encoder=False, random_state=42, **model_params\\n        )\\n        use_eval_set = True\\n    else:\\n        msg = (\\n            \\\"`model_name` must be one of 'logistic_regression', 'sgd_classifier', \\\"\\n            \\\"'random_forest', 'lightgbm', 'xgboost'.\\\"\\n        )\\n        logger.error(msg)\\n        raise ValueError(msg)\\n\\n    logger.info(f\\\"Training model {model_name}.\\\")\\n    classifier, training_metrics = train_model(\\n        classifier,\\n        X_train=df_train,\\n        y_train=y_train,\\n        X_valid=df_valid,\\n        y_valid=y_valid,\\n        use_eval_set=use_eval_set,\\n        fit_args=fit_args.get(model_name, {}),\\n        **data_processing_args,\\n    )\\n    logger.info(\\\"Training completed.\\\")\\n    logger.debug(f\\\"Type of classifier: {type(classifier)}.\\\")\\n    logger.debug(f\\\"Classifier: {classifier}.\\\")\\n    for k, v in training_metrics.items():\\n        if k != \\\"Precision Recall Curve\\\":\\n            train_metrics.log_metric(k, v)\\n\\n    validation_metrics, _, _ = evaluate_model(classifier, df_valid, y_valid)\\n    logger.info(\\\"Evaluation completed.\\\")\\n    for k, v in validation_metrics.items():\\n        if k != \\\"Precision Recall Curve\\\":\\n            valid_metrics.log_metric(k, v)\\n\\n    logger.debug(f\\\"Type of classifier: {type(classifier)}.\\\")\\n    logger.debug(f\\\"Classifier: {classifier}.\\\")\\n    model.path = model.path + f\\\"/{model_name}\\\"\\n    model_dir = Path(model.path).parent.absolute()\\n    os.makedirs(model_dir, exist_ok=True)\\n\\n    # logger.info(f\\\"Saving model to {model.path}.\\\")\\n    # joblib.dump(classifier, model.path)\\n\\n\"], \"args\": [\"--executor_input\", \"{{$.json_escape[1]}}\", \"--function_to_execute\", \"train_evaluate_model\"]}, \"disk_spec\": {\"boot_disk_type\": \"pd-ssd\", \"boot_disk_size_gb\": 100}}], \"service_account\": \"{{$.inputs.parameters['service_account']}}\", \"network\": \"{{$.inputs.parameters['network']}}\", \"tensorboard\": \"{{$.inputs.parameters['tensorboard']}}\", \"base_output_directory\": {\"output_uri_prefix\": \"{{$.inputs.parameters['base_output_directory']}}\"}}}",
+              "--project",
+              "{{$.inputs.parameters['project']}}",
+              "--location",
+              "{{$.inputs.parameters['location']}}",
+              "--gcp_resources",
+              "{{$.outputs.parameters['gcp_resources'].output_file}}"
+            ],
+            "command": [
+              "python3",
+              "-u",
+              "-m",
+              "google_cloud_pipeline_components.container.v1.custom_job.launcher"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.44"
+          }
+        },
+        "exec-vertex-pipelines-notification-email": {
+          "container": {
+            "args": [
+              "--type",
+              "VertexNotificationEmail",
+              "--payload",
+              ""
+            ],
+            "command": [
+              "python3",
+              "-u",
+              "-m",
+              "google_cloud_pipeline_components.container.experimental.vertex_notification_email.executor"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.44"
+          }
         }
       }
     },
@@ -342,357 +1100,81 @@
     },
     "root": {
       "dag": {
+        "outputs": {
+          "artifacts": {
+            "train-evaluate-model-train_metrics": {
+              "artifactSelectors": [
+                {
+                  "outputArtifactKey": "train-evaluate-model-train_metrics",
+                  "producerSubtask": "exit-handler-1"
+                }
+              ]
+            },
+            "train-evaluate-model-valid_metrics": {
+              "artifactSelectors": [
+                {
+                  "outputArtifactKey": "train-evaluate-model-valid_metrics",
+                  "producerSubtask": "exit-handler-1"
+                }
+              ]
+            }
+          }
+        },
         "tasks": {
-          "bq-table-to-dataset": {
-            "cachingOptions": {
-              "enableCache": true
-            },
+          "exit-handler-1": {
             "componentRef": {
-              "name": "comp-bq-table-to-dataset"
-            },
-            "dependentTasks": [
-              "execute-query-2",
-              "get-data-version"
-            ],
-            "inputs": {
-              "parameters": {
-                "bq_client_project_id": {
-                  "componentInputParameter": "project_id"
-                },
-                "dataset_id": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}"
-                    }
-                  }
-                },
-                "dataset_location": {
-                  "componentInputParameter": "dataset_location"
-                },
-                "extract_job_config": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "{\"destination_format\": \"PARQUET\"}"
-                    }
-                  }
-                },
-                "file_pattern": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "file_*"
-                    }
-                  }
-                },
-                "pipelineparam--dataset_id": {
-                  "componentInputParameter": "dataset_id"
-                },
-                "pipelineparam--get-data-version-Output": {
-                  "taskOutputParameter": {
-                    "outputParameterKey": "Output",
-                    "producerTask": "get-data-version"
-                  }
-                },
-                "skip_if_exists": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "True"
-                    }
-                  }
-                },
-                "source_project_id": {
-                  "componentInputParameter": "project_id"
-                },
-                "table_name": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "training"
-                    }
-                  }
-                }
-              }
-            },
-            "taskInfo": {
-              "name": "Extract training data"
-            }
-          },
-          "bq-table-to-dataset-2": {
-            "cachingOptions": {
-              "enableCache": true
-            },
-            "componentRef": {
-              "name": "comp-bq-table-to-dataset-2"
-            },
-            "dependentTasks": [
-              "execute-query-2",
-              "get-data-version"
-            ],
-            "inputs": {
-              "parameters": {
-                "bq_client_project_id": {
-                  "componentInputParameter": "project_id"
-                },
-                "dataset_id": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}"
-                    }
-                  }
-                },
-                "dataset_location": {
-                  "componentInputParameter": "dataset_location"
-                },
-                "extract_job_config": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "{\"destination_format\": \"PARQUET\"}"
-                    }
-                  }
-                },
-                "file_pattern": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "file_*"
-                    }
-                  }
-                },
-                "pipelineparam--dataset_id": {
-                  "componentInputParameter": "dataset_id"
-                },
-                "pipelineparam--get-data-version-Output": {
-                  "taskOutputParameter": {
-                    "outputParameterKey": "Output",
-                    "producerTask": "get-data-version"
-                  }
-                },
-                "skip_if_exists": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "True"
-                    }
-                  }
-                },
-                "source_project_id": {
-                  "componentInputParameter": "project_id"
-                },
-                "table_name": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "validation"
-                    }
-                  }
-                }
-              }
-            },
-            "taskInfo": {
-              "name": "Extract validation data"
-            }
-          },
-          "bq-table-to-dataset-3": {
-            "cachingOptions": {
-              "enableCache": true
-            },
-            "componentRef": {
-              "name": "comp-bq-table-to-dataset-3"
-            },
-            "dependentTasks": [
-              "execute-query-2",
-              "get-data-version"
-            ],
-            "inputs": {
-              "parameters": {
-                "bq_client_project_id": {
-                  "componentInputParameter": "project_id"
-                },
-                "dataset_id": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}"
-                    }
-                  }
-                },
-                "dataset_location": {
-                  "componentInputParameter": "dataset_location"
-                },
-                "extract_job_config": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "{\"destination_format\": \"PARQUET\"}"
-                    }
-                  }
-                },
-                "file_pattern": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "file_*"
-                    }
-                  }
-                },
-                "pipelineparam--dataset_id": {
-                  "componentInputParameter": "dataset_id"
-                },
-                "pipelineparam--get-data-version-Output": {
-                  "taskOutputParameter": {
-                    "outputParameterKey": "Output",
-                    "producerTask": "get-data-version"
-                  }
-                },
-                "skip_if_exists": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "True"
-                    }
-                  }
-                },
-                "source_project_id": {
-                  "componentInputParameter": "project_id"
-                },
-                "table_name": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "testing"
-                    }
-                  }
-                }
-              }
-            },
-            "taskInfo": {
-              "name": "Extract test data"
-            }
-          },
-          "execute-query": {
-            "cachingOptions": {
-              "enableCache": true
-            },
-            "componentRef": {
-              "name": "comp-execute-query"
-            },
-            "dependentTasks": [
-              "get-data-version"
-            ],
-            "inputs": {
-              "parameters": {
-                "bq_client_project_id": {
-                  "componentInputParameter": "project_id"
-                },
-                "dataset_location": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "europe-west2"
-                    }
-                  }
-                },
-                "pipelineparam--dataset_id": {
-                  "componentInputParameter": "dataset_id"
-                },
-                "pipelineparam--get-data-version-Output": {
-                  "taskOutputParameter": {
-                    "outputParameterKey": "Output",
-                    "producerTask": "get-data-version"
-                  }
-                },
-                "pipelineparam--project_id": {
-                  "componentInputParameter": "project_id"
-                },
-                "query": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "CREATE TEMP TABLE merged\nCLUSTER BY mcc, datetime_unix_seconds\nAS (\n    WITH transactions AS (\n        /* Features related to transactions */\n        SELECT\n            ROW_NUMBER() OVER() AS transaction_id,\n            DATETIME(t.year, t.month, t.day, CAST(SUBSTR(t.time, 1, 2) AS INT), CAST(SUBSTR(t.time, 4, 2) AS INT), 0) AS datetime,\n            t.year,\n            SIN((CAST(SUBSTR(t.time, 1, 2) AS INT) / 24) * 2 * ACOS(-1)) AS hour_sin,\n            COS((CAST(SUBSTR(t.time, 1, 2) AS INT) / 24) * 2 * ACOS(-1)) AS hour_cos,\n            SIN(((t.month - 1) / 12) * 2 * ACOS(-1)) AS month_sin,\n            COS(((t.month - 1) / 12) * 2 * ACOS(-1)) AS month_cos,\n            IF(t.year >= 2015, 1, 0) AS is_2015_or_later,\n            t.amount,\n            IF(t.use_chip = \"Chip Transaction\", 1, 0) AS chip_transaction,\n            IF(t.use_chip = \"Swipe Transaction\", 1, 0) AS swipe_transaction,\n            IF(t.use_chip = \"Online Transaction\", 1, 0) AS online_transaction,\n            IF(t.use_chip = \"Chip Transaction\" OR t.use_chip = \"Swipe Transaction\", 1, 0) AS card_present_transaction,\n            t.card,\n            t.user,\n            t.mcc,\n            CAST(t.Is_Fraud_ AS INT) AS is_fraud\n\n        FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.transactions` t\n    )\n\n    , users AS (\n        /* Features related to users */\n        SELECT\n            u.user,\n            IF(u.gender = \"Male\", 0, 1) AS gender,\n            CAST(REPLACE(u.`Per Capita Income - Zipcode`, \"$\", \"\") AS NUMERIC) AS per_capita_income_zipcode,\n            CAST(REPLACE(u.`Yearly Income - Person`, \"$\", \"\") AS NUMERIC) AS yearly_income_person,\n            CAST(REPLACE(u.`Total Debt`, \"$\", \"\") AS NUMERIC) AS total_debt,\n\n        FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.users` u\n    )\n\n    , cards AS (\n        /* Features related to cards */\n        SELECT\n            user,\n            card_index,\n            IF(card_brand = \"Amex\", 1, 0) AS amex,\n            IF(card_brand = \"Discover\", 1, 0) AS discover,\n            IF(card_brand = \"Mastercard\", 1, 0) AS mastercard,\n            IF(card_brand = \"Visa\", 1, 0) AS visa,\n            IF(card_type = \"Credit\", 1, 0) AS credit,\n            IF(card_type = \"Debit\", 1, 0) AS debit,\n            IF(card_type = \"Debit (Prepaid)\", 1, 0) AS debit_prepaid,\n            credit_limit,\n            IF(has_chip IS TRUE, 1, 0) AS has_chip,\n            IF(card_on_dark_web IS TRUE, 1, 0) AS card_on_dark_web,\n\n        FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.cards`\n    )\n\n    /* Merging all features together */\n    SELECT\n        t.transaction_id,\n        t.datetime,\n        t.year,\n        UNIX_SECONDS(CAST(t.datetime AS TIMESTAMP)) AS datetime_unix_seconds,\n        t.hour_sin,\n        t.hour_cos,\n        t.month_sin,\n        t.month_cos,\n        EXTRACT(DAYOFWEEK FROM t.datetime) AS day_of_week,\n        IF(EXTRACT(DAYOFWEEK FROM t.datetime) IN (1, 7), 1, 0) AS weekend,\n        IF(EXTRACT(DATE FROM t.datetime) IN (SELECT date FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.holidays`), 1, 0) AS is_holiday,\n        SIN((IF(EXTRACT(DAYOFWEEK FROM t.datetime) = 1, 6, EXTRACT(DAYOFWEEK FROM t.datetime) - 2) / 7) * 2 * ACOS(-1)) AS day_of_week_sin,\n        COS((IF(EXTRACT(DAYOFWEEK FROM t.datetime) = 1, 6, EXTRACT(DAYOFWEEK FROM t.datetime) - 2) / 7) * 2 * ACOS(-1)) AS day_of_week_cos,\n        t.is_2015_or_later,\n        t.amount,\n        t.swipe_transaction,\n        t.chip_transaction,\n        t.online_transaction,\n        t.card_present_transaction,\n        IF(t.is_fraud = 1 AND t.chip_transaction = 1, 1, 0) AS fraud_chip,\n        IF(t.is_fraud = 1 AND t.swipe_transaction = 1, 1, 0) AS fraud_swipe,\n        IF(t.is_fraud = 1 AND t.online_transaction = 1, 1, 0) AS fraud_online,\n        IF(t.is_fraud = 1 AND t.card_present_transaction = 1, 1, 0) AS fraud_card_present,\n        t.user,\n        t.mcc,\n        u.gender,\n        c.amex,\n        c.discover,\n        c.mastercard,\n        c.visa,\n        c.credit,\n        c.debit,\n        c.debit_prepaid,\n        c.credit_limit,\n        c.has_chip,\n        c.card_on_dark_web,\n        u.per_capita_income_zipcode,\n        u.yearly_income_person,\n        u.total_debt,\n        t.is_fraud,\n\n    FROM transactions t\n\n    INNER JOIN cards c\n        ON t.card = c.card_index\n        AND t.user = c.user\n\n    INNER JOIN users u\n        ON t.user = u.user\n)\n;\n\nCREATE TEMP TABLE mcc_aux AS (\n    /* Rolling features related to MCC */\n    SELECT\n        m.transaction_id,\n        SUM(m.is_fraud) OVER(mcc_window) / COUNT(m.is_fraud) OVER(mcc_window) AS mcc_mean_encoding\n\n    FROM merged m\n    WINDOW mcc_window AS (PARTITION BY m.mcc ORDER BY m.datetime_unix_seconds RANGE BETWEEN UNBOUNDED PRECEDING AND 604800 PRECEDING)\n)\n;\n\nCREATE TEMP TABLE user_aux\nCLUSTER BY user, datetime_unix_seconds\n/* Rolling features related to users */\nAS (\n    SELECT\n        m.*,\n        AVG(m.amount) OVER(user_window) AS mean_amount,\n        COUNT(m.transaction_id) OVER(user_window) AS transaction_count,\n        DATE_DIFF(m.datetime, MIN(m.datetime) OVER(PARTITION BY m.user), DAY) AS days_since_first_transaction,\n\n    FROM merged m\n    WINDOW user_window AS (PARTITION BY m.user ORDER BY m.datetime ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING)\n)\n;\n\nCREATE TEMP TABLE rolling_aux_amount_frequency AS (\n    /* Rolling features related to transaction amount and frquency */\n    WITH tmp AS (\n        SELECT\n            r.*,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 86400 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_1_days,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 172800 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_2_days,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 604800 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_7_days,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_30_days,\n            COALESCE(AVG(r.amount) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 1 PRECEDING), 0) AS mean_amount_last_year,\n            IF(\n                r.days_since_first_transaction > 0,\n                (r.transaction_count - 1) / r.days_since_first_transaction,\n                0\n            ) AS transaction_frequency_all,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 86400 PRECEDING AND 1 PRECEDING)\n                    / LEAST(1, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_1_days,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 172800 PRECEDING AND 1 PRECEDING)\n                    / LEAST(2, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_2_days,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 604800 PRECEDING AND 1 PRECEDING)\n                    / LEAST(7, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_7_days,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 1 PRECEDING)\n                    / LEAST(30, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_30_days,\n            IF(\n                r.days_since_first_transaction > 0,\n                COUNT(r.transaction_id) OVER(PARTITION BY r.user ORDER BY r.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 1 PRECEDING)\n                    / LEAST(365, r.days_since_first_transaction),\n                0\n            ) AS transaction_frequency_last_year\n\n        FROM user_aux r\n    )\n    SELECT\n        t.transaction_id,\n        t.mean_amount,\n        t.transaction_count,\n        days_since_first_transaction,\n        mean_amount_last_year,\n        mean_amount_last_30_days,\n        mean_amount_last_7_days,\n        mean_amount_last_2_days,\n        mean_amount_last_1_days,\n        transaction_frequency_all,\n        transaction_frequency_last_year,\n        transaction_frequency_last_30_days,\n        transaction_frequency_last_7_days,\n        transaction_frequency_last_2_days,\n        transaction_frequency_last_1_days,\n\n        COALESCE(SAFE_DIVIDE(mean_amount_last_7_days, mean_amount_last_year), 0) AS mean_amount_last_7_days_relative_to_last_year,\n        COALESCE(SAFE_DIVIDE(mean_amount_last_2_days, mean_amount_last_year), 0) AS mean_amount_last_2_days_relative_to_last_year,\n        COALESCE(SAFE_DIVIDE(mean_amount_last_1_days, mean_amount_last_year), 0) AS mean_amount_last_1_days_relative_to_last_year,\n\n        COALESCE(SAFE_DIVIDE(mean_amount_last_7_days, mean_amount_last_30_days), 0) AS mean_amount_last_7_days_relative_to_last_30_days,\n        COALESCE(SAFE_DIVIDE(mean_amount_last_2_days, mean_amount_last_30_days), 0) AS mean_amount_last_2_days_relative_to_last_30_days,\n        COALESCE(SAFE_DIVIDE(mean_amount_last_1_days, mean_amount_last_30_days), 0) AS mean_amount_last_1_days_relative_to_last_30_days,\n\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_7_days, transaction_frequency_last_year), 0) AS `7_days_transaction_frequency_relative_to_last_year`,\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_2_days, transaction_frequency_last_year), 0) AS `2_days_transaction_frequency_relative_to_last_year`,\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_1_days, transaction_frequency_last_year), 0) AS `1_days_transaction_frequency_relative_to_last_year`,\n\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_7_days, transaction_frequency_last_30_days), 0) AS `7_days_transaction_frequency_relative_to_last_30_days`,\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_2_days, transaction_frequency_last_30_days), 0) AS `2_days_transaction_frequency_relative_to_last_30_days`,\n        COALESCE(SAFE_DIVIDE(transaction_frequency_last_1_days, transaction_frequency_last_30_days), 0) AS `1_days_transaction_frequency_relative_to_last_30_days`,\n\n    FROM tmp t\n)\n;\n\nCREATE TEMP TABLE rolling_aux_frauds\n/* Rolling features related to amount of frauds */\nAS (\n    WITH tmp1 AS (\n        SELECT\n            m.transaction_id,\n            m.year,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_2_years,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_365_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_60_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_30_days,\n\n        FROM merged m\n\n        WHERE m.year <= 2000\n    )\n\n    , tmp2 AS (\n        SELECT\n            m.transaction_id,\n            m.year,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_2_years,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_365_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_60_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_30_days,\n\n        FROM merged m\n\n        WHERE m.year BETWEEN 1998 AND 2010\n    )\n\n    , tmp3 AS (\n        SELECT\n            m.transaction_id,\n            m.year,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_2_years,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_365_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_60_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_30_days,\n\n        FROM merged m\n\n        WHERE m.year BETWEEN 2008 AND 2015\n    )\n\n    , tmp4 AS (\n        SELECT\n            m.transaction_id,\n            m.year,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_2_years,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_365_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_60_days,\n            COALESCE(AVG(m.is_fraud) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_swipe) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_swipe_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_chip) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_chip_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_online) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_online_rolling_mean_30_days,\n\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 63072000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_2_years,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 31536000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_365_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 5184000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_60_days,\n            COALESCE(AVG(m.fraud_card_present) OVER (ORDER BY m.datetime_unix_seconds RANGE BETWEEN 2592000 PRECEDING AND 604800 PRECEDING), 0) AS fraud_card_present_rolling_mean_30_days,\n\n        FROM merged m\n\n        WHERE m.year >= 2013\n    )\n\n    , all_years AS (\n        SELECT * EXCEPT(year) FROM tmp1\n\n        UNION ALL\n\n        SELECT * EXCEPT(year) FROM tmp2 WHERE year BETWEEN 2001 AND 2010\n\n        UNION ALL\n\n        SELECT * EXCEPT(year) FROM tmp3 WHERE year BETWEEN 2011 AND 2015\n\n        UNION ALL\n\n        SELECT * EXCEPT(year) FROM tmp4 WHERE year >= 2016\n    )\n\n    SELECT\n        a.*,\n        COALESCE(SAFE_DIVIDE(fraud_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_swipe_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_swipe_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_swipe_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_swipe_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_chip_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_chip_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_chip_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_chip_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_online_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_online_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_online_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_online_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_30_days, fraud_rolling_mean_365_days), 0) AS fraud_card_present_rolling_30_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_30_days, fraud_rolling_mean_2_years), 0) AS fraud_card_present_rolling_30_days_relative_to_2_years,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_60_days, fraud_rolling_mean_365_days), 0) AS fraud_card_present_rolling_60_days_relative_to_365_days,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_60_days, fraud_rolling_mean_2_years), 0) AS fraud_card_present_rolling_60_days_relative_to_2_years,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_30_days, fraud_rolling_mean_30_days), 0) AS fraud_swipe_rolling_30_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_30_days, fraud_rolling_mean_30_days), 0) AS fraud_chip_rolling_30_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_30_days, fraud_rolling_mean_30_days), 0) AS fraud_online_rolling_30_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_30_days, fraud_rolling_mean_30_days), 0) AS fraud_card_present_rolling_30_days_relative_to_all_frauds,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_60_days, fraud_rolling_mean_60_days), 0) AS fraud_swipe_rolling_60_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_60_days, fraud_rolling_mean_60_days), 0) AS fraud_chip_rolling_60_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_60_days, fraud_rolling_mean_60_days), 0) AS fraud_online_rolling_60_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_60_days, fraud_rolling_mean_60_days), 0) AS fraud_card_present_rolling_60_days_relative_to_all_frauds,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_365_days, fraud_rolling_mean_365_days), 0) AS fraud_swipe_rolling_365_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_365_days, fraud_rolling_mean_365_days), 0) AS fraud_chip_rolling_365_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_365_days, fraud_rolling_mean_365_days), 0) AS fraud_online_rolling_365_days_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_365_days, fraud_rolling_mean_365_days), 0) AS fraud_card_present_rolling_365_days_relative_to_all_frauds,\n\n        COALESCE(SAFE_DIVIDE(fraud_swipe_rolling_mean_2_years, fraud_rolling_mean_2_years), 0) AS fraud_swipe_rolling_2_years_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_chip_rolling_mean_2_years, fraud_rolling_mean_2_years), 0) AS fraud_chip_rolling_2_years_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_online_rolling_mean_2_years, fraud_rolling_mean_2_years), 0) AS fraud_online_rolling_2_years_relative_to_all_frauds,\n        COALESCE(SAFE_DIVIDE(fraud_card_present_rolling_mean_2_years, fraud_rolling_mean_2_years), 0) AS fraud_card_present_rolling_2_years_relative_to_all_frauds,\n\n    FROM all_years a\n)\n;\n\nCREATE OR REPLACE TABLE `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.preprocessed` \nCLUSTER BY datetime_unix_seconds\nAS (\n    SELECT\n        m.transaction_id,\n        m.datetime_unix_seconds,\n        `amount`,\n`has_chip`,\n`gender`,\n`online_transaction`,\n`amex`,\n`discover`,\n`mastercard`,\n`visa`,\n`credit`,\n`debit`,\n`debit_prepaid`,\n`mcc_mean_encoding`,\n`card_present_transaction`,\n`fraud_rolling_mean_30_days`,\n`fraud_rolling_mean_60_days`,\n`fraud_rolling_mean_365_days`,\n`fraud_rolling_mean_2_years`,\n`fraud_online_rolling_mean_30_days`,\n`fraud_online_rolling_mean_60_days`,\n`fraud_online_rolling_mean_365_days`,\n`fraud_online_rolling_mean_2_years`,\n`fraud_card_present_rolling_mean_30_days`,\n`fraud_card_present_rolling_mean_60_days`,\n`fraud_card_present_rolling_mean_365_days`,\n`fraud_card_present_rolling_mean_2_years`,\n`fraud_rolling_30_days_relative_to_365_days`,\n`fraud_rolling_30_days_relative_to_2_years`,\n`fraud_rolling_60_days_relative_to_365_days`,\n`fraud_rolling_60_days_relative_to_2_years`,\n`fraud_online_rolling_30_days_relative_to_365_days`,\n`fraud_online_rolling_30_days_relative_to_2_years`,\n`fraud_online_rolling_60_days_relative_to_365_days`,\n`fraud_online_rolling_60_days_relative_to_2_years`,\n`fraud_card_present_rolling_30_days_relative_to_365_days`,\n`fraud_card_present_rolling_30_days_relative_to_2_years`,\n`fraud_card_present_rolling_60_days_relative_to_365_days`,\n`fraud_card_present_rolling_60_days_relative_to_2_years`,\n`fraud_online_rolling_30_days_relative_to_all_frauds`,\n`fraud_card_present_rolling_30_days_relative_to_all_frauds`,\n`fraud_online_rolling_60_days_relative_to_all_frauds`,\n`fraud_card_present_rolling_60_days_relative_to_all_frauds`,\n`fraud_online_rolling_365_days_relative_to_all_frauds`,\n`fraud_card_present_rolling_365_days_relative_to_all_frauds`,\n`fraud_online_rolling_2_years_relative_to_all_frauds`,\n`fraud_card_present_rolling_2_years_relative_to_all_frauds`,\n`hour_sin`,\n`hour_cos`,\n`month_sin`,\n`month_cos`,\n`day_of_week_sin`,\n`day_of_week_cos`,\n`is_holiday`,\n`weekend`,\n`is_2015_or_later`,\n`mean_amount`,\n`mean_amount_last_year`,\n`mean_amount_last_30_days`,\n`mean_amount_last_7_days`,\n`mean_amount_last_2_days`,\n`mean_amount_last_1_days`,\n`mean_amount_last_7_days_relative_to_last_year`,\n`mean_amount_last_2_days_relative_to_last_year`,\n`mean_amount_last_1_days_relative_to_last_year`,\n`mean_amount_last_7_days_relative_to_last_30_days`,\n`mean_amount_last_2_days_relative_to_last_30_days`,\n`mean_amount_last_1_days_relative_to_last_30_days`,\n`transaction_count`,\n`days_since_first_transaction`,\n`transaction_frequency_all`,\n`transaction_frequency_last_year`,\n`transaction_frequency_last_30_days`,\n`transaction_frequency_last_7_days`,\n`transaction_frequency_last_2_days`,\n`transaction_frequency_last_1_days`,\n`1_days_transaction_frequency_relative_to_last_30_days`,\n`1_days_transaction_frequency_relative_to_last_year`,\n`2_days_transaction_frequency_relative_to_last_30_days`,\n`2_days_transaction_frequency_relative_to_last_year`,\n`7_days_transaction_frequency_relative_to_last_30_days`,\n`7_days_transaction_frequency_relative_to_last_year`,\n        is_fraud\n\n    FROM merged m\n\n    INNER JOIN mcc_aux mc\n        ON m.transaction_id = mc.transaction_id\n\n    INNER JOIN rolling_aux_amount_frequency raf\n        ON m.transaction_id = raf.transaction_id\n\n    INNER JOIN rolling_aux_frauds rf\n        ON m.transaction_id = rf.transaction_id\n)\n;"
-                    }
-                  }
-                },
-                "query_job_config": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "{\"use_query_cache\": true}"
-                    }
-                  }
-                }
-              }
-            },
-            "taskInfo": {
-              "name": "Preprocess input data"
-            }
-          },
-          "execute-query-2": {
-            "cachingOptions": {
-              "enableCache": true
-            },
-            "componentRef": {
-              "name": "comp-execute-query-2"
-            },
-            "dependentTasks": [
-              "execute-query",
-              "get-data-version"
-            ],
-            "inputs": {
-              "parameters": {
-                "bq_client_project_id": {
-                  "componentInputParameter": "project_id"
-                },
-                "dataset_location": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "europe-west2"
-                    }
-                  }
-                },
-                "pipelineparam--dataset_id": {
-                  "componentInputParameter": "dataset_id"
-                },
-                "pipelineparam--get-data-version-Output": {
-                  "taskOutputParameter": {
-                    "outputParameterKey": "Output",
-                    "producerTask": "get-data-version"
-                  }
-                },
-                "pipelineparam--project_id": {
-                  "componentInputParameter": "project_id"
-                },
-                "query": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "DECLARE train_limit INT64 DEFAULT (\n    SELECT APPROX_QUANTILES(datetime_unix_seconds, 100)[OFFSET(CAST(100 * (1 - 0.15 - 0.15) AS INT))] train_limit\n    FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.preprocessed`\n)\n;\n\nCREATE OR REPLACE TABLE `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.training` AS (\n    SELECT t.* EXCEPT(datetime_unix_seconds)\n\n    FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.preprocessed` t\n\n    WHERE t.datetime_unix_seconds < train_limit\n)\n;\n\nCREATE TEMP TABLE validation_testing AS (\n    SELECT t.* EXCEPT(datetime_unix_seconds)\n\n    FROM `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.preprocessed` t\n\n    WHERE t.datetime_unix_seconds >= train_limit\n)\n;\n\nCREATE OR REPLACE TABLE `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.validation` AS (\n    SELECT t.*\n\n    FROM validation_testing t\n\n    WHERE ABS(MOD(t.transaction_id, 100)) < CAST(0.15 / (0.15 + 0.15) * 100 AS INT)\n)\n;\n\nCREATE OR REPLACE TABLE `{{$.inputs.parameters['pipelineparam--project_id']}}.{{$.inputs.parameters['pipelineparam--dataset_id']}}_{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}.testing` AS (\n    SELECT t.*\n\n    FROM validation_testing t\n\n    WHERE ABS(MOD(t.transaction_id, 100)) >= CAST(0.15 / (0.15 + 0.15) * 100 AS INT)\n)\n;"
-                    }
-                  }
-                },
-                "query_job_config": {
-                  "runtimeValue": {
-                    "constantValue": {
-                      "stringValue": "{\"use_query_cache\": true}"
-                    }
-                  }
-                }
-              }
-            },
-            "taskInfo": {
-              "name": "Train / validation / test split"
-            }
-          },
-          "get-data-version": {
-            "cachingOptions": {
-              "enableCache": true
-            },
-            "componentRef": {
-              "name": "comp-get-data-version"
+              "name": "comp-exit-handler-1"
             },
             "inputs": {
               "parameters": {
-                "dataset_id": {
-                  "componentInputParameter": "dataset_id"
-                },
-                "dataset_location": {
-                  "componentInputParameter": "dataset_location"
-                },
-                "payload_data_version": {
+                "pipelineparam--data_version": {
                   "componentInputParameter": "data_version"
                 },
-                "project_id": {
+                "pipelineparam--dataset_id": {
+                  "componentInputParameter": "dataset_id"
+                },
+                "pipelineparam--dataset_location": {
+                  "componentInputParameter": "dataset_location"
+                },
+                "pipelineparam--models": {
+                  "componentInputParameter": "models"
+                },
+                "pipelineparam--project_id": {
                   "componentInputParameter": "project_id"
+                },
+                "pipelineparam--project_location": {
+                  "componentInputParameter": "project_location"
                 }
               }
             },
             "taskInfo": {
-              "name": "Get data version"
+              "name": "Notify pipeline result"
+            }
+          },
+          "vertex-pipelines-notification-email": {
+            "componentRef": {
+              "name": "comp-vertex-pipelines-notification-email"
+            },
+            "dependentTasks": [
+              "exit-handler-1"
+            ],
+            "inputs": {
+              "parameters": {
+                "pipeline_task_final_status": {
+                  "taskFinalStatus": {
+                    "producerTask": "exit-handler-1"
+                  }
+                },
+                "recipients": {
+                  "componentInputParameter": "email_notification_recipients"
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "vertex-pipelines-notification-email"
+            },
+            "triggerPolicy": {
+              "strategy": "ALL_UPSTREAM_TASKS_COMPLETED"
             }
           }
         }
@@ -708,6 +1190,12 @@
           "dataset_location": {
             "type": "STRING"
           },
+          "email_notification_recipients": {
+            "type": "STRING"
+          },
+          "models": {
+            "type": "STRING"
+          },
           "pipeline_files_gcs_path": {
             "type": "STRING"
           },
@@ -718,10 +1206,35 @@
             "type": "STRING"
           }
         }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "train-evaluate-model-train_metrics": {
+            "artifactType": {
+              "schemaTitle": "system.Metrics",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "train-evaluate-model-valid_metrics": {
+            "artifactType": {
+              "schemaTitle": "system.Metrics",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
       }
     },
     "schemaVersion": "2.0.0",
     "sdkVersion": "kfp-1.8.22"
   },
-  "runtimeConfig": {}
+  "runtimeConfig": {
+    "parameters": {
+      "email_notification_recipients": {
+        "stringValue": "[\"roberto.fierimonte.spam@gmail.com\"]"
+      },
+      "models": {
+        "stringValue": "[\"logistic_regression\", \"sgd_classifier\"]"
+      }
+    }
+  }
 }

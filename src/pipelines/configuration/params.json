@@ -6,7 +6,7 @@
         "xgboost",
         "lightgbm"
     ],
-    "training_params": {
+    "data_processing_args": {
         "data_sampling": "rose",
         "rose_shrinkage": 0.5,
         "rose_upsampled_minority_proportion": 0.3
@@ -28,7 +28,7 @@
             "is_unbalance": true
         }
     },
-    "fit_params": {
+    "fit_args": {
         "xgboost": {
             "verbose": 0
         }

@@ -2,12 +2,11 @@ from pathlib import Path
 
 from kfp.v2.dsl import Artifact, Dataset, Input, Metrics, Model, Output, component
 
-from src.components.dependencies import JOBLIB, PANDAS, PYTHON, SCIKIT_LEARN
+from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
 @component(
-    base_image=PYTHON,
-    packages_to_install=[SCIKIT_LEARN, PANDAS, JOBLIB],
+    base_image=PIPELINE_IMAGE_NAME,
     output_component_file=str(Path(__file__).with_suffix(".yaml")),
 )
 def evaluate_model(
@@ -15,7 +14,7 @@ def evaluate_model(
     target_column: str,
     model: Input[Model],
     predictions: Output[Dataset],
-    metrics: Output[Metrics],
+    test_metrics: Output[Metrics],
     metrics_artifact: Output[Artifact],
 ) -> None:
     """Evaluate a trained model on test data and report goodness metrics.
@@ -36,20 +35,19 @@ def evaluate_model(
     """
     import joblib
     import pandas as pd
-    from sklearn.metrics import accuracy_score
+    from loguru import logger
 
-    dtc = joblib.load(model.path)
+    from src.base.model import evaluate_model
 
-    df_test = pd.read_csv(test_data.path)
-    y = df_test.pop(target_column)
+    classifier = joblib.load(model.path)
 
-    preds = dtc.predict(df_test)
-    df_test["pred"] = preds
+    df_test = pd.read_parquet(test_data.path)
+    df_test = df_test.drop(columns=["transaction_id"])
+    y_test = df_test.pop(target_column)
+    logger.info(f"Loaded test data, shape {df_test.shape}.")
 
-    df_test.to_csv(predictions.path, index=False)
-
-    metrics_df = pd.DataFrame({"accuracy": [accuracy_score(y, preds)]})
-    metrics_df.to_csv(metrics_artifact.path)
-
-    for k, v in metrics_df.T[0].to_dict().items():
-        metrics.log_metric(k, v)
+    test_metrics, _, _ = evaluate_model(classifier, df_test, y_test)
+    logger.info("Evaluation completed.")
+    for k, v in test_metrics.items():
+        if k != "Precision Recall Curve":
+            test_metrics.log_metric(k, v)

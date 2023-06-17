@@ -114,7 +114,7 @@ CREATE TEMP TABLE mcc_aux AS (
     /* Rolling features related to MCC */
     SELECT
         m.transaction_id,
-        SUM(m.is_fraud) OVER(mcc_window) / COUNT(m.is_fraud) OVER(mcc_window) AS mcc_mean_encoding
+        COALESCE(SUM(m.is_fraud) OVER(mcc_window) / COUNT(m.is_fraud) OVER(mcc_window), 0) AS mcc_mean_encoding
 
     FROM merged m
     WINDOW mcc_window AS (PARTITION BY m.mcc ORDER BY m.datetime_unix_seconds RANGE BETWEEN UNBOUNDED PRECEDING AND {{ fraud_delay_seconds }} PRECEDING)
@@ -127,7 +127,7 @@ CLUSTER BY user, datetime_unix_seconds
 AS (
     SELECT
         m.*,
-        AVG(m.amount) OVER(user_window) AS mean_amount,
+        COALESCE(AVG(m.amount) OVER(user_window), 0) AS mean_amount,
         COUNT(m.transaction_id) OVER(user_window) AS transaction_count,
         DATE_DIFF(m.datetime, MIN(m.datetime) OVER(PARTITION BY m.user), DAY) AS days_since_first_transaction,
 
