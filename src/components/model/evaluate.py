@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from kfp.v2.dsl import Artifact, Dataset, Input, Metrics, Model, Output, component
+from kfp.v2.dsl import Dataset, Input, Metrics, Model, Output, component
 
 from src.components.dependencies import PIPELINE_IMAGE_NAME
 
@@ -15,7 +15,6 @@ def evaluate_model(
     model: Input[Model],
     predictions: Output[Dataset],
     test_metrics: Output[Metrics],
-    metrics_artifact: Output[Artifact],
 ) -> None:
     """Evaluate a trained model on test data and report goodness metrics.
 
@@ -46,8 +45,8 @@ def evaluate_model(
     y_test = df_test.pop(target_column)
     logger.info(f"Loaded test data, shape {df_test.shape}.")
 
-    test_metrics, _, _ = evaluate_model(classifier, df_test, y_test)
+    testing_metrics, _, _ = evaluate_model(classifier, df_test, y_test)
     logger.info("Evaluation completed.")
-    for k, v in test_metrics.items():
+    for k, v in testing_metrics.items():
         if k != "Precision Recall Curve":
             test_metrics.log_metric(k, v)

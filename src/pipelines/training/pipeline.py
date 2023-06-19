@@ -15,7 +15,7 @@ from kfp.v2 import compiler, dsl
 from src.base.utilities import generate_query, read_json
 from src.components.bigquery import bq_table_to_dataset, execute_query
 from src.components.data import get_data_version
-from src.components.model import train_evaluate_model
+from src.components.model import evaluate_model, train_evaluate_model
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=InconsistentTypeWarning, append=True)
@@ -203,6 +203,17 @@ def training_pipeline(
                 )
                 .after(extract_training_data, extract_validation_data)
                 .set_display_name("Train and evaluate models")
+                .set_caching_options(True)
+            )
+
+            evaluate = (
+                evaluate_model(
+                    test_data=extract_test_data.outputs["dataset"],
+                    target_column=config_params["target_column"],
+                    model=train.outputs["model"],
+                )
+                .after(train)
+                .set_display_name("Predict and evaluate models")
             )
 
     # train = (

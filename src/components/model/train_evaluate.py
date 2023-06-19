@@ -45,6 +45,7 @@ def train_evaluate_model(
     import os
     from pathlib import Path
 
+    import joblib
     import pandas as pd
     from lightgbm import LGBMClassifier
     from loguru import logger
@@ -118,5 +119,5 @@ def train_evaluate_model(
     model_dir = Path(model.path).parent.absolute()
     os.makedirs(model_dir, exist_ok=True)
 
-    # logger.info(f"Saving model to {model.path}.")
-    # joblib.dump(classifier, model.path)
+    logger.info(f"Saving model to {model.path}.")
+    joblib.dump(classifier, model.path)

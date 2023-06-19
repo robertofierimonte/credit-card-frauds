@@ -12,21 +12,10 @@ outputs:
     Model predictions including input columns
     as a KFP Dataset object. This parameter will be passed automatically
     by the orchestrator.
-- name: metrics
-  type: Metrics
-  description: |-
-    Output metrics for the trained model. This
-    parameter will be passed automatically by the orchestrator and it
-    can be referred to by clicking on the component's execution in
-    the pipeline.
-- name: metrics_artifact
-  type: Artifact
-  description: |-
-    Output metrics Artifact for the trained
-    model. This parameter will be passed automatically by the orchestrator.
+- {name: test_metrics, type: Metrics}
 implementation:
   container:
-    image: python:3.9
+    image: europe-west2-docker.pkg.dev/robertofierimonte-ml-pipe/docker-repo/credit-card-frauds:latest
     command:
     - sh
     - -c
@@ -36,7 +25,7 @@ implementation:
           python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip
       fi
 
-      PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'scikit-learn==1.1.2' 'pandas==1.4.3' 'joblib==1.2.0' 'kfp==1.8.22' && "$0" "$@"
+      PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.22' && "$0" "$@"
     - sh
     - -ec
     - |
@@ -55,8 +44,7 @@ implementation:
           target_column: str,
           model: Input[Model],
           predictions: Output[Dataset],
-          metrics: Output[Metrics],
-          metrics_artifact: Output[Artifact],
+          test_metrics: Output[Metrics],
       ) -> None:
           """Evaluate a trained model on test data and report goodness metrics.
 
@@ -76,23 +64,22 @@ implementation:
           """
           import joblib
           import pandas as pd
-          from sklearn.metrics import accuracy_score
+          from loguru import logger
 
-          dtc = joblib.load(model.path)
+          from src.base.model import evaluate_model
 
-          df_test = pd.read_csv(test_data.path)
-          y = df_test.pop(target_column)
+          classifier = joblib.load(model.path)
 
-          preds = dtc.predict(df_test)
-          df_test["pred"] = preds
+          df_test = pd.read_parquet(test_data.path)
+          df_test = df_test.drop(columns=["transaction_id"])
+          y_test = df_test.pop(target_column)
+          logger.info(f"Loaded test data, shape {df_test.shape}.")
 
-          df_test.to_csv(predictions.path, index=False)
-
-          metrics_df = pd.DataFrame({"accuracy": [accuracy_score(y, preds)]})
-          metrics_df.to_csv(metrics_artifact.path)
-
-          for k, v in metrics_df.T[0].to_dict().items():
-              metrics.log_metric(k, v)
+          testing_metrics, _, _ = evaluate_model(classifier, df_test, y_test)
+          logger.info("Evaluation completed.")
+          for k, v in testing_metrics.items():
+              if k != "Precision Recall Curve":
+                  test_metrics.log_metric(k, v)
 
     args:
     - --executor_input

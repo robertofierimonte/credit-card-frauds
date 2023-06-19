@@ -148,6 +148,46 @@
           }
         }
       },
+      "comp-evaluate-model": {
+        "executorLabel": "exec-evaluate-model",
+        "inputDefinitions": {
+          "artifacts": {
+            "model": {
+              "artifactType": {
+                "schemaTitle": "system.Model",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "test_data": {
+              "artifactType": {
+                "schemaTitle": "system.Dataset",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "target_column": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "predictions": {
+              "artifactType": {
+                "schemaTitle": "system.Dataset",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "test_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          }
+        }
+      },
       "comp-execute-query": {
         "executorLabel": "exec-execute-query",
         "inputDefinitions": {
@@ -190,6 +230,14 @@
         "dag": {
           "outputs": {
             "artifacts": {
+              "evaluate-model-test_metrics": {
+                "artifactSelectors": [
+                  {
+                    "outputArtifactKey": "evaluate-model-test_metrics",
+                    "producerSubtask": "for-loop-2"
+                  }
+                ]
+              },
               "train-evaluate-model-train_metrics": {
                 "artifactSelectors": [
                   {
@@ -540,7 +588,8 @@
               },
               "dependentTasks": [
                 "bq-table-to-dataset",
-                "bq-table-to-dataset-2"
+                "bq-table-to-dataset-2",
+                "bq-table-to-dataset-3"
               ],
               "inputs": {
                 "artifacts": {
@@ -548,6 +597,12 @@
                     "taskOutputArtifact": {
                       "outputArtifactKey": "dataset",
                       "producerTask": "bq-table-to-dataset-2"
+                    }
+                  },
+                  "pipelineparam--bq-table-to-dataset-3-dataset": {
+                    "taskOutputArtifact": {
+                      "outputArtifactKey": "dataset",
+                      "producerTask": "bq-table-to-dataset-3"
                     }
                   },
                   "pipelineparam--bq-table-to-dataset-dataset": {
@@ -635,6 +690,12 @@
         },
         "outputDefinitions": {
           "artifacts": {
+            "evaluate-model-test_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            },
             "train-evaluate-model-train_metrics": {
               "artifactType": {
                 "schemaTitle": "system.Metrics",
@@ -654,6 +715,14 @@
         "dag": {
           "outputs": {
             "artifacts": {
+              "evaluate-model-test_metrics": {
+                "artifactSelectors": [
+                  {
+                    "outputArtifactKey": "test_metrics",
+                    "producerSubtask": "evaluate-model"
+                  }
+                ]
+              },
               "train-evaluate-model-train_metrics": {
                 "artifactSelectors": [
                   {
@@ -673,6 +742,42 @@
             }
           },
           "tasks": {
+            "evaluate-model": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-evaluate-model"
+              },
+              "dependentTasks": [
+                "train-evaluate-model"
+              ],
+              "inputs": {
+                "artifacts": {
+                  "model": {
+                    "taskOutputArtifact": {
+                      "outputArtifactKey": "model",
+                      "producerTask": "train-evaluate-model"
+                    }
+                  },
+                  "test_data": {
+                    "componentInputArtifact": "pipelineparam--bq-table-to-dataset-3-dataset"
+                  }
+                },
+                "parameters": {
+                  "target_column": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "is_fraud"
+                      }
+                    }
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "Predict and evaluate models"
+              }
+            },
             "train-evaluate-model": {
               "cachingOptions": {
                 "enableCache": true
@@ -771,6 +876,12 @@
                 "schemaVersion": "0.0.1"
               }
             },
+            "pipelineparam--bq-table-to-dataset-3-dataset": {
+              "artifactType": {
+                "schemaTitle": "system.Dataset",
+                "schemaVersion": "0.0.1"
+              }
+            },
             "pipelineparam--bq-table-to-dataset-dataset": {
               "artifactType": {
                 "schemaTitle": "system.Dataset",
@@ -795,6 +906,12 @@
         },
         "outputDefinitions": {
           "artifacts": {
+            "evaluate-model-test_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            },
             "train-evaluate-model-train_metrics": {
               "artifactType": {
                 "schemaTitle": "system.Metrics",
@@ -993,6 +1110,26 @@
             "image": "python:3.9"
           }
         },
+        "exec-evaluate-model": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "evaluate_model"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef evaluate_model(\n    test_data: Input[Dataset],\n    target_column: str,\n    model: Input[Model],\n    predictions: Output[Dataset],\n    test_metrics: Output[Metrics],\n) -> None:\n    \"\"\"Evaluate a trained model on test data and report goodness metrics.\n\n    Args:\n        test_data (Input[Dataset]): Evaluation data as a KFP Dataset object.\n        target_column (str): Column containing the target column for classification.\n        model (Input[Model]): Input trained model as a KFP Model object.\n        predictions (Output[Dataset]): Model predictions including input columns\n            as a KFP Dataset object. This parameter will be passed automatically\n            by the orchestrator.\n        metrics (Output[Metrics]): Output metrics for the trained model. This\n            parameter will be passed automatically by the orchestrator and it\n            can be referred to by clicking on the component's execution in\n            the pipeline.\n        metrics_artifact (Output[Artifact]): Output metrics Artifact for the trained\n            model. This parameter will be passed automatically by the orchestrator.\n    \"\"\"\n    import joblib\n    import pandas as pd\n    from loguru import logger\n\n    from src.base.model import evaluate_model\n\n    classifier = joblib.load(model.path)\n\n    df_test = pd.read_parquet(test_data.path)\n    df_test = df_test.drop(columns=[\"transaction_id\"])\n    y_test = df_test.pop(target_column)\n    logger.info(f\"Loaded test data, shape {df_test.shape}.\")\n\n    testing_metrics, _, _ = evaluate_model(classifier, df_test, y_test)\n    logger.info(\"Evaluation completed.\")\n    for k, v in testing_metrics.items():\n        if k != \"Precision Recall Curve\":\n            test_metrics.log_metric(k, v)\n\n"
+            ],
+            "image": "europe-west2-docker.pkg.dev/robertofierimonte-ml-pipe/docker-repo/credit-card-frauds:latest"
+          }
+        },
         "exec-execute-query": {
           "container": {
             "args": [
@@ -1059,7 +1196,7 @@
               "--type",
               "CustomJob",
               "--payload",
-              "{\"display_name\": \"Train evaluate model\", \"job_spec\": {\"worker_pool_specs\": [{\"machine_spec\": {\"machine_type\": \"n1-standard-32\"}, \"replica_count\": 1, \"container_spec\": {\"image_uri\": \"europe-west2-docker.pkg.dev/robertofierimonte-ml-pipe/docker-repo/credit-card-frauds:latest\", \"command\": [\"sh\", \"-c\", \"\\nif ! [ -x \\\"$(command -v pip)\\\" ]; then\\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\\nfi\\n\\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.22' && \\\"$0\\\" \\\"$@\\\"\\n\", \"sh\", \"-ec\", \"program_path=$(mktemp -d)\\nprintf \\\"%s\\\" \\\"$0\\\" > \\\"$program_path/ephemeral_component.py\\\"\\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \\\"$program_path/ephemeral_component.py\\\"                         \\\"$@\\\"\\n\", \"\\nimport kfp\\nfrom kfp.v2 import dsl\\nfrom kfp.v2.dsl import *\\nfrom typing import *\\n\\ndef train_evaluate_model(\\n    training_data: Input[Dataset],\\n    validation_data: Input[Dataset],\\n    target_column: str,\\n    model_name: str,\\n    train_metrics: Output[Metrics],\\n    valid_metrics: Output[Metrics],\\n    model: Output[Model],\\n    models_params: dict = {},\\n    fit_args: dict = {},\\n    data_processing_args: dict = {},\\n) -> None:\\n    \\\"\\\"\\\"Train a classification model on the training data.\\n\\n    Args:\\n        training_data (Input[Dataset]): Training data as a KFP Dataset object.\\n        validation_data (Input[Dataset]): Validation data (used to prevent overfitting)\\n            as a KFP Dataset object.\\n        target_column (str): Column containing the target column for classification.\\n        model_name (str): Name of the classifier that will be trained. Must be one of\\n            'logistic_regression', 'sgd_classifier', 'random_forest', 'lightgbm',\\n            'xgboost'.\\n        models_params (dict): Hyperparameters of the model. Default to an empty dict.\\n        fit_args (dict): Arguments used when fitting the model.\\n            Default to an empty dict.\\n        data_processing_args (dict): Arguments used when running extra processing on\\n            the data (such as scaling or oversampling). Default to an empty dict.\\n        train_metrics (Output[Metrics]):\\n        valid_metrics (Output[Metrics]):\\n        model (Output[Model]): Output model as a KFP Model object, this parameter\\n            will be passed automatically by the orchestrator. The .path\\n            attribute is the location of the joblib file in GCS.\\n    \\\"\\\"\\\"\\n    import os\\n    from pathlib import Path\\n\\n    import joblib\\n    import pandas as pd\\n    from lightgbm import LGBMClassifier\\n    from loguru import logger\\n    from sklearn.ensemble import RandomForestClassifier\\n    from sklearn.linear_model import LogisticRegression, SGDClassifier\\n    from xgboost import XGBClassifier\\n\\n    from src.base.model import evaluate_model, train_model\\n\\n    df_train = pd.read_parquet(training_data.path)\\n    df_train = df_train.drop(columns=[\\\"transaction_id\\\"])\\n    y_train = df_train.pop(target_column)\\n    logger.info(f\\\"Loaded training data, shape {df_train.shape}.\\\")\\n\\n    df_valid = pd.read_parquet(validation_data.path)\\n    df_valid = df_valid.drop(columns=[\\\"transaction_id\\\"])\\n    y_valid = df_valid.pop(target_column)\\n    logger.info(f\\\"Loaded evaluation data, shape {df_valid.shape}.\\\")\\n\\n    use_eval_set = False\\n    model_params = models_params.get(model_name, {})\\n    if model_name == \\\"logistic_regression\\\":\\n        classifier = LogisticRegression(random_state=42, **model_params)\\n    elif model_name == \\\"sgd_classifier\\\":\\n        classifier = SGDClassifier(random_state=42, **model_params)\\n    elif model_name == \\\"random_forest\\\":\\n        classifier = RandomForestClassifier(random_state=42, **model_params)\\n    elif model_name == \\\"lightgbm\\\":\\n        classifier = LGBMClassifier(random_state=42, **model_params)\\n        use_eval_set = True\\n    elif model_name == \\\"xgboost\\\":\\n        classifier = XGBClassifier(\\n            use_label_encoder=False, random_state=42, **model_params\\n        )\\n        use_eval_set = True\\n    else:\\n        msg = (\\n            \\\"`model_name` must be one of 'logistic_regression', 'sgd_classifier', \\\"\\n            \\\"'random_forest', 'lightgbm', 'xgboost'.\\\"\\n        )\\n        logger.error(msg)\\n        raise ValueError(msg)\\n\\n    logger.info(f\\\"Training model {model_name}.\\\")\\n    classifier, training_metrics = train_model(\\n        classifier,\\n        X_train=df_train,\\n        y_train=y_train,\\n        X_valid=df_valid,\\n        y_valid=y_valid,\\n        use_eval_set=use_eval_set,\\n        fit_args=fit_args.get(model_name, {}),\\n        **data_processing_args,\\n    )\\n    logger.info(\\\"Training completed.\\\")\\n    logger.debug(f\\\"Type of classifier: {type(classifier)}.\\\")\\n    logger.debug(f\\\"Classifier: {classifier}.\\\")\\n    for k, v in training_metrics.items():\\n        if k != \\\"Precision Recall Curve\\\":\\n            train_metrics.log_metric(k, v)\\n\\n    validation_metrics, _, _ = evaluate_model(classifier, df_valid, y_valid)\\n    logger.info(\\\"Evaluation completed.\\\")\\n    for k, v in validation_metrics.items():\\n        if k != \\\"Precision Recall Curve\\\":\\n            valid_metrics.log_metric(k, v)\\n\\n    logger.debug(f\\\"Type of classifier: {type(classifier)}.\\\")\\n    logger.debug(f\\\"Classifier: {classifier}.\\\")\\n    model.path = model.path + f\\\"/{model_name}\\\"\\n    model_dir = Path(model.path).parent.absolute()\\n    os.makedirs(model_dir, exist_ok=True)\\n\\n    # logger.info(f\\\"Saving model to {model.path}.\\\")\\n    # joblib.dump(classifier, model.path)\\n\\n\"], \"args\": [\"--executor_input\", \"{{$.json_escape[1]}}\", \"--function_to_execute\", \"train_evaluate_model\"]}, \"disk_spec\": {\"boot_disk_type\": \"pd-ssd\", \"boot_disk_size_gb\": 100}}], \"service_account\": \"{{$.inputs.parameters['service_account']}}\", \"network\": \"{{$.inputs.parameters['network']}}\", \"tensorboard\": \"{{$.inputs.parameters['tensorboard']}}\", \"base_output_directory\": {\"output_uri_prefix\": \"{{$.inputs.parameters['base_output_directory']}}\"}}}",
+              "{\"display_name\": \"Train evaluate model\", \"job_spec\": {\"worker_pool_specs\": [{\"machine_spec\": {\"machine_type\": \"n1-standard-32\"}, \"replica_count\": 1, \"container_spec\": {\"image_uri\": \"europe-west2-docker.pkg.dev/robertofierimonte-ml-pipe/docker-repo/credit-card-frauds:latest\", \"command\": [\"sh\", \"-c\", \"\\nif ! [ -x \\\"$(command -v pip)\\\" ]; then\\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\\nfi\\n\\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.22' && \\\"$0\\\" \\\"$@\\\"\\n\", \"sh\", \"-ec\", \"program_path=$(mktemp -d)\\nprintf \\\"%s\\\" \\\"$0\\\" > \\\"$program_path/ephemeral_component.py\\\"\\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \\\"$program_path/ephemeral_component.py\\\"                         \\\"$@\\\"\\n\", \"\\nimport kfp\\nfrom kfp.v2 import dsl\\nfrom kfp.v2.dsl import *\\nfrom typing import *\\n\\ndef train_evaluate_model(\\n    training_data: Input[Dataset],\\n    validation_data: Input[Dataset],\\n    target_column: str,\\n    model_name: str,\\n    train_metrics: Output[Metrics],\\n    valid_metrics: Output[Metrics],\\n    model: Output[Model],\\n    models_params: dict = {},\\n    fit_args: dict = {},\\n    data_processing_args: dict = {},\\n) -> None:\\n    \\\"\\\"\\\"Train a classification model on the training data.\\n\\n    Args:\\n        training_data (Input[Dataset]): Training data as a KFP Dataset object.\\n        validation_data (Input[Dataset]): Validation data (used to prevent overfitting)\\n            as a KFP Dataset object.\\n        target_column (str): Column containing the target column for classification.\\n        model_name (str): Name of the classifier that will be trained. Must be one of\\n            'logistic_regression', 'sgd_classifier', 'random_forest', 'lightgbm',\\n            'xgboost'.\\n        models_params (dict): Hyperparameters of the model. Default to an empty dict.\\n        fit_args (dict): Arguments used when fitting the model.\\n            Default to an empty dict.\\n        data_processing_args (dict): Arguments used when running extra processing on\\n            the data (such as scaling or oversampling). Default to an empty dict.\\n        train_metrics (Output[Metrics]):\\n        valid_metrics (Output[Metrics]):\\n        model (Output[Model]): Output model as a KFP Model object, this parameter\\n            will be passed automatically by the orchestrator. The .path\\n            attribute is the location of the joblib file in GCS.\\n    \\\"\\\"\\\"\\n    import os\\n    from pathlib import Path\\n\\n    import joblib\\n    import pandas as pd\\n    from lightgbm import LGBMClassifier\\n    from loguru import logger\\n    from sklearn.ensemble import RandomForestClassifier\\n    from sklearn.linear_model import LogisticRegression, SGDClassifier\\n    from xgboost import XGBClassifier\\n\\n    from src.base.model import evaluate_model, train_model\\n\\n    df_train = pd.read_parquet(training_data.path)\\n    df_train = df_train.drop(columns=[\\\"transaction_id\\\"])\\n    y_train = df_train.pop(target_column)\\n    logger.info(f\\\"Loaded training data, shape {df_train.shape}.\\\")\\n\\n    df_valid = pd.read_parquet(validation_data.path)\\n    df_valid = df_valid.drop(columns=[\\\"transaction_id\\\"])\\n    y_valid = df_valid.pop(target_column)\\n    logger.info(f\\\"Loaded evaluation data, shape {df_valid.shape}.\\\")\\n\\n    use_eval_set = False\\n    model_params = models_params.get(model_name, {})\\n    if model_name == \\\"logistic_regression\\\":\\n        classifier = LogisticRegression(random_state=42, **model_params)\\n    elif model_name == \\\"sgd_classifier\\\":\\n        classifier = SGDClassifier(random_state=42, **model_params)\\n    elif model_name == \\\"random_forest\\\":\\n        classifier = RandomForestClassifier(random_state=42, **model_params)\\n    elif model_name == \\\"lightgbm\\\":\\n        classifier = LGBMClassifier(random_state=42, **model_params)\\n        use_eval_set = True\\n    elif model_name == \\\"xgboost\\\":\\n        classifier = XGBClassifier(\\n            use_label_encoder=False, random_state=42, **model_params\\n        )\\n        use_eval_set = True\\n    else:\\n        msg = (\\n            \\\"`model_name` must be one of 'logistic_regression', 'sgd_classifier', \\\"\\n            \\\"'random_forest', 'lightgbm', 'xgboost'.\\\"\\n        )\\n        logger.error(msg)\\n        raise ValueError(msg)\\n\\n    logger.info(f\\\"Training model {model_name}.\\\")\\n    classifier, training_metrics = train_model(\\n        classifier,\\n        X_train=df_train,\\n        y_train=y_train,\\n        X_valid=df_valid,\\n        y_valid=y_valid,\\n        use_eval_set=use_eval_set,\\n        fit_args=fit_args.get(model_name, {}),\\n        **data_processing_args,\\n    )\\n    logger.info(\\\"Training completed.\\\")\\n    logger.debug(f\\\"Type of classifier: {type(classifier)}.\\\")\\n    logger.debug(f\\\"Classifier: {classifier}.\\\")\\n    for k, v in training_metrics.items():\\n        if k != \\\"Precision Recall Curve\\\":\\n            train_metrics.log_metric(k, v)\\n\\n    validation_metrics, _, _ = evaluate_model(classifier, df_valid, y_valid)\\n    logger.info(\\\"Evaluation completed.\\\")\\n    for k, v in validation_metrics.items():\\n        if k != \\\"Precision Recall Curve\\\":\\n            valid_metrics.log_metric(k, v)\\n\\n    logger.debug(f\\\"Type of classifier: {type(classifier)}.\\\")\\n    logger.debug(f\\\"Classifier: {classifier}.\\\")\\n    model.path = model.path + f\\\"/{model_name}\\\"\\n    model_dir = Path(model.path).parent.absolute()\\n    os.makedirs(model_dir, exist_ok=True)\\n\\n    logger.info(f\\\"Saving model to {model.path}.\\\")\\n    joblib.dump(classifier, model.path)\\n\\n\"], \"args\": [\"--executor_input\", \"{{$.json_escape[1]}}\", \"--function_to_execute\", \"train_evaluate_model\"]}, \"disk_spec\": {\"boot_disk_type\": \"pd-ssd\", \"boot_disk_size_gb\": 100}}], \"service_account\": \"{{$.inputs.parameters['service_account']}}\", \"network\": \"{{$.inputs.parameters['network']}}\", \"tensorboard\": \"{{$.inputs.parameters['tensorboard']}}\", \"base_output_directory\": {\"output_uri_prefix\": \"{{$.inputs.parameters['base_output_directory']}}\"}}}",
               "--project",
               "{{$.inputs.parameters['project']}}",
               "--location",
@@ -1102,6 +1239,14 @@
       "dag": {
         "outputs": {
           "artifacts": {
+            "evaluate-model-test_metrics": {
+              "artifactSelectors": [
+                {
+                  "outputArtifactKey": "evaluate-model-test_metrics",
+                  "producerSubtask": "exit-handler-1"
+                }
+              ]
+            },
             "train-evaluate-model-train_metrics": {
               "artifactSelectors": [
                 {
@@ -1209,6 +1354,12 @@
       },
       "outputDefinitions": {
         "artifacts": {
+          "evaluate-model-test_metrics": {
+            "artifactType": {
+              "schemaTitle": "system.Metrics",
+              "schemaVersion": "0.0.1"
+            }
+          },
           "train-evaluate-model-train_metrics": {
             "artifactType": {
               "schemaTitle": "system.Metrics",

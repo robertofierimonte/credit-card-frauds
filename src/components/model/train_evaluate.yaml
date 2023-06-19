@@ -177,8 +177,8 @@ implementation:
           model_dir = Path(model.path).parent.absolute()
           os.makedirs(model_dir, exist_ok=True)
 
-          # logger.info(f"Saving model to {model.path}.")
-          # joblib.dump(classifier, model.path)
+          logger.info(f"Saving model to {model.path}.")
+          joblib.dump(classifier, model.path)
 
     args:
     - --executor_input
