@@ -1,7 +1,7 @@
 import json
 import os
-import pathlib
 import warnings
+from pathlib import Path
 
 from google_cloud_pipeline_components.experimental.custom_job.utils import (
     create_custom_training_job_op_from_component,
@@ -13,15 +13,21 @@ from kfp.dsl.types import InconsistentTypeWarning
 from kfp.v2 import compiler, dsl
 
 from src.base.utilities import generate_query, read_json
+from src.components.aiplatform import upload_model
 from src.components.bigquery import bq_table_to_dataset, execute_query
 from src.components.data import get_data_version
+from src.components.dependencies import PIPELINE_IMAGE_NAME
+from src.components.helpers import get_current_time
 from src.components.model import evaluate_model, train_evaluate_model
+from src.components.monitoring import generate_training_stats_schema
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=InconsistentTypeWarning, append=True)
 
 PIPELINE_TAG = os.getenv("PIPELINE_TAG", "untagged")
-PIPELINE_NAME = f"frauds-training-pipeline-{PIPELINE_TAG}"
+BRANCH_NAME = os.getenv("CURRENT_BRANCH", "no_branch")
+COMMIT_HASH = os.getenv("CURRENT_COMMIT", "no_commit")
+PIPELINE_NAME = f"frauds-training-pipeline-{BRANCH_NAME}-{COMMIT_HASH}"
 
 
 @dsl.pipeline(name=PIPELINE_NAME, description="Credit card frauds training Pipeline")
@@ -33,7 +39,7 @@ def training_pipeline(
     data_version: str,
     pipeline_files_gcs_path: str,
     models: list = [
-        "logistic_regression",
+        # "logistic_regression",
         "sgd_classifier",
         # "random_forest",
         # "xgboost",
@@ -64,9 +70,16 @@ def training_pipeline(
         recipients=email_notification_recipients
     )
 
-    queries_folder = pathlib.Path(__file__).parent / "queries"
-    config_folder = pathlib.Path(__file__).parent.parent / "configuration"
+    queries_folder = Path(__file__).parent / "queries"
+    config_folder = Path(__file__).parent.parent / "configuration"
     config_params = read_json(config_folder / "params.json")
+
+    models_gcs_folder_path = str(
+        Path(f"{pipeline_files_gcs_path}") / "models" / BRANCH_NAME / COMMIT_HASH
+    )
+    artifacts_gcs_folder_path = str(
+        Path(f"{pipeline_files_gcs_path}") / "artifacts" / BRANCH_NAME / COMMIT_HASH
+    )
 
     features = "`" + "`,\n`".join(f for f in config_params["features"]) + "`"
 
@@ -81,6 +94,10 @@ def training_pipeline(
             .set_display_name("Get data version")
             .set_caching_options(True)
         )
+
+        current_timestamp = get_current_time(
+            timestamp="{{$.pipeline_job_create_time_utc}}", format_str="%Y%m%d%H%M%S"
+        ).set_display_name("Format current timestamp")
 
         dataset_name = f"{project_id}.{dataset_id}_{data_version.output}"
         transactions_table = f"{dataset_name}.transactions"
@@ -181,13 +198,33 @@ def training_pipeline(
             .set_caching_options(True)
         )
 
+        training_stats_schema_job = create_custom_training_job_op_from_component(
+            component_spec=generate_training_stats_schema,
+            machine_type="n1-standard-16",
+            replica_count=1,
+        )
+
+        training_stats_schema = (
+            training_stats_schema_job(
+                training_data=extract_training_data.outputs["dataset"],
+                target_column=config_params["target_column"],
+                artifacts_gcs_folder_path=artifacts_gcs_folder_path,
+                # Training wrapper specific arguments
+                project=project_id,
+                location=project_location,
+            )
+            .after(extract_training_data)
+            .set_display_name("Extract TFDV training stats")
+            .set_caching_options(True)
+        )
+
         train_job = create_custom_training_job_op_from_component(
             component_spec=train_evaluate_model,
             machine_type="n1-standard-32",
             replica_count=1,
         )
 
-        with dsl.ParallelFor(loop_args=models, parallelism=1) as item:
+        with dsl.ParallelFor(loop_args=models, parallelism=2) as item:
             train = (
                 train_job(
                     training_data=extract_training_data.outputs["dataset"],
@@ -197,6 +234,7 @@ def training_pipeline(
                     models_params=json.dumps(config_params["models_params"]),
                     fit_args=json.dumps(config_params["fit_args"]),
                     data_processing_args=config_params["data_processing_args"],
+                    model_gcs_folder_path=models_gcs_folder_path,
                     # Training wrapper specific arguments
                     project=project_id,
                     location=project_location,
@@ -214,42 +252,34 @@ def training_pipeline(
                 )
                 .after(train)
                 .set_display_name("Predict and evaluate models")
+                .set_caching_options(True)
             )
 
-    # train = (
-    #     train_model(
-    #         training_data=train_test_data.outputs["output_train_dataset"],
-    #         target_column=config_params["target_column"],
-    #         model_params=json.dumps(config_params["model_params"]),
-    #         model_file_name=config_params["model_file_name"],
-    #     )
-    #     .after(train_test_data)
-    #     .set_display_name("Train model")
-    # )
-
-    # evaluate = evaluate_model(
-    #     test_data=train_test_data.outputs["output_test_dataset"],
-    #     target_column=config_params["target_column"],
-    #     model=train.outputs["model"],
-    # ).set_display_name("Evaluate model")
-
-    # upload = upload_model(
-    #     model_id=config_params["model_name"],
-    #     display_name=config_params["model_name"],
-    #     serving_container_image_uri=PIPELINE_IMAGE_NAME,
-    #     project_id=project_id,
-    #     project_location=project_location,
-    #     model=train.outputs["model"],
-    #     labels=json.dumps(
-    #         dict(
-    #             train_pipeline_timestamp=f"{current_timestamp.output}",
-    #             pipeline_tag=PIPELINE_TAG,
-    #         )
-    #     ),
-    #     description="Taxi fare prediction model",
-    #     is_default_version=True,
-    #     version_description="Taxi fare prediction model",
-    # ).set_display_name("Upload model")
+            upload = (
+                upload_model(
+                    model_id="credit-card-frauds",
+                    display_name="credit-card-frauds",
+                    serving_container_image_uri=PIPELINE_IMAGE_NAME,
+                    project_id=project_id,
+                    project_location=project_location,
+                    model=train.outputs["model"],
+                    labels=json.dumps(
+                        dict(
+                            timestamp=f"{current_timestamp.output}",
+                            pipeline_tag=PIPELINE_TAG,
+                            branch_name=BRANCH_NAME,
+                            commit_hash=COMMIT_HASH,
+                            # data_version=f"{data_version.output}",
+                            # model_name=item
+                        )
+                    ),
+                    description="Credit card frauds model",
+                    is_default_version=False,
+                    version_description="Credit card frauds model",
+                )
+                .after(train)
+                .set_display_name("Upload model")
+            )
 
 
 def compile():

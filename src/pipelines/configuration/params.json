@@ -18,6 +18,13 @@
         "sgd_classifier": {
             "loss": "modified_huber"
         },
+        "random_forest": {
+            "n_jobs": -1,
+            "class_weight": "balanced",
+            "bootstrap": true,
+            "max_samples": 0.3,
+            "max_depth": 6
+        },
         "xgboost": {
             "eval_metric": "logloss",
             "scale_pos_weight": 10,

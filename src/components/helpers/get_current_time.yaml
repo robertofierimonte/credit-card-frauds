@@ -4,7 +4,7 @@ inputs:
 - name: timestamp
   type: String
   description: |-
-    Timestamp in ISO 6801 format.
+    Timestamp in ISO 8601 format.
     Defaults to None.
   optional: true
 - name: format_str
@@ -34,7 +34,7 @@ implementation:
           python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip
       fi
 
-      PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'loguru==0.6.0' 'kfp==1.8.22' && "$0" "$@"
+      PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'loguru==0.7.0' 'kfp==1.8.22' && "$0" "$@"
     - sh
     - -ec
     - |
@@ -55,13 +55,13 @@ implementation:
       ) -> str:
           """Create timestamp for filtering the data in the pipelines.
 
-          If `timestamp` is empty, return the current time (UTC+0) in ISO 6801 format.
+          If `timestamp` is empty, return the current time (UTC+0) in ISO 8601 format.
           Otherwise, return the formatted `timestamp`. If `timestamp` is provided, it
-          must follow ISO 6801 format (e.g. 2023-05-21T19:00:00). The date part is
+          must follow ISO 8601 format (e.g. 2023-05-21T19:00:00). The date part is
           mandatory while any missing part in the time part will be regarded as zero.
 
           Args:
-              timestamp (Optional[str], optional): Timestamp in ISO 6801 format.
+              timestamp (Optional[str], optional): Timestamp in ISO 8601 format.
                   Defaults to None.
               format_str (Optional[str], optional): Formatting string for the output,
                   must be compatible with datetime. Defaults to None.
@@ -69,7 +69,7 @@ implementation:
                   current timestamp. Only used if `timestamp` is None. Defaults to 0.
 
           Returns:
-              str: Formatted input timestamp is ISO 6801 format
+              str: Formatted input timestamp
           """
           from datetime import datetime, timedelta, timezone
 
@@ -84,7 +84,9 @@ implementation:
                   return dt.strftime(format=format_str)
 
           else:
+              logger.info(f"timestamp: {timestamp}.")
               try:
+                  timestamp = timestamp.replace("Z", "+00:00")
                   dt = datetime.fromisoformat(timestamp)
                   logger.info(f"Timestamp in ISO 8601 format: {dt}.")
                   if not format_str:
@@ -92,7 +94,7 @@ implementation:
                   else:
                       return dt.strftime(format=format_str)
               except ValueError:
-                  err = "Timestamp is not in the correct ISO 6801 format "
+                  err = "Timestamp is not in the correct ISO 8601 format "
                   logger.error(err)
                   raise ValueError(err)
 

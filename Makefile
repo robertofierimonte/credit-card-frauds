@@ -31,33 +31,18 @@ setup: ## Install all the required Python dependencies, download the data, and c
 upload-data: ## Upload the data from the local folder to Azure and create a data asset. Optionally specify data-version={data_version}
 	@poetry run python -m scripts.upload_data --data-version ${data-version}
 
-build-image: ## Build the Docker image locally. Must specify image=<base|bitbucket-cicd>
-	@if [ ${image} = "base" ]; then \
-		docker build --tag ${IMAGE_NAME} -f ./containers/${image}/Dockerfile .; \
-	elif [ ${image} = "bitbucket-cicd" ]; then \
-		docker build --tag ${ARTIFACT_REGISTRY_REPO}/${image} -f ./containers/${image}/Dockerfile \
-		--build-arg BITBUCKET_WORKSPACE=${BITBUCKET_WORKSPACE} \
-		--build-arg BITBUCKET_REPO_SLUG=${BITBUCKET_REPO_SLUG} \
-		--build-arg BITBUCKET_CICD_TOKEN=${BITBUCKET_CICD_TOKEN} .; \
-	else \
-		echo "Image name unknown"; \
-	fi
+build-image: ## Build the Docker image locally.
+	@docker build --tag ${IMAGE_NAME} -f ./containers/base/Dockerfile .
 
 push-image: ## Push the Docker image to the container registry. Must specify image=<base|bitbucket-cicd>
-	@ $(MAKE) build-image && \
-	gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS} && \
-	gcloud auth configure-docker ${VERTEX_LOCATION}-docker.pkg.dev && \
-	if [ ${image} = "base" ]; then \
-		docker push ${IMAGE_NAME}; \
-	elif [ ${image} = "bitbucket-cicd" ]; then \
-		docker push ${ARTIFACT_REGISTRY_REPO}/${image}; \
-	else \
-		echo "Image name unknown"; \
-	fi
+	@$(MAKE) build-image && \
+		gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS} && \
+		gcloud auth configure-docker ${VERTEX_LOCATION}-docker.pkg.dev && \
+		docker push ${IMAGE_NAME}
 
 compile: ## Compile the pipeline. Must specify pipeline=<training|prediction>
-	@ poetry run python -m src.pipelines.${pipeline}.pipeline
+	@poetry run python -m src.pipelines.${pipeline}.pipeline
 
 run: ## Run the pipeline. Must specify pipeline=<training|prediction>. Optionally specify enable-caching=<true|false> and data-version={data_version}
-	@ $(MAKE) compile && \
+	@$(MAKE) compile && \
 		poetry run python -m src.trigger.main --payload=./src/pipelines/${pipeline}/payloads/${pipeline}.json --enable-caching=${enable-caching} --data-version=${data-version}

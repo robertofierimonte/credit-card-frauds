@@ -589,7 +589,8 @@
               "dependentTasks": [
                 "bq-table-to-dataset",
                 "bq-table-to-dataset-2",
-                "bq-table-to-dataset-3"
+                "bq-table-to-dataset-3",
+                "get-current-time"
               ],
               "inputs": {
                 "artifacts": {
@@ -613,8 +614,17 @@
                   }
                 },
                 "parameters": {
+                  "pipelineparam--get-current-time-Output": {
+                    "taskOutputParameter": {
+                      "outputParameterKey": "Output",
+                      "producerTask": "get-current-time"
+                    }
+                  },
                   "pipelineparam--models": {
                     "componentInputParameter": "pipelineparam--models"
+                  },
+                  "pipelineparam--pipeline_files_gcs_path": {
+                    "componentInputParameter": "pipelineparam--pipeline_files_gcs_path"
                   },
                   "pipelineparam--project_id": {
                     "componentInputParameter": "pipelineparam--project_id"
@@ -625,7 +635,7 @@
                 }
               },
               "iteratorPolicy": {
-                "parallelismLimit": 1.0
+                "parallelismLimit": 2.0
               },
               "parameterIterator": {
                 "itemInput": "pipelineparam--models-loop-item",
@@ -635,6 +645,119 @@
               },
               "taskInfo": {
                 "name": "for-loop-2"
+              }
+            },
+            "generate-training-stats-schema": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-generate-training-stats-schema"
+              },
+              "dependentTasks": [
+                "bq-table-to-dataset"
+              ],
+              "inputs": {
+                "artifacts": {
+                  "training_data": {
+                    "taskOutputArtifact": {
+                      "outputArtifactKey": "dataset",
+                      "producerTask": "bq-table-to-dataset"
+                    }
+                  }
+                },
+                "parameters": {
+                  "artifacts_gcs_folder_path": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{{$.inputs.parameters['pipelineparam--pipeline_files_gcs_path']}}/artifacts/master/57dfe73"
+                      }
+                    }
+                  },
+                  "base_output_directory": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  },
+                  "location": {
+                    "componentInputParameter": "pipelineparam--project_location"
+                  },
+                  "network": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  },
+                  "pipelineparam--pipeline_files_gcs_path": {
+                    "componentInputParameter": "pipelineparam--pipeline_files_gcs_path"
+                  },
+                  "project": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "service_account": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  },
+                  "target_column": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "is_fraud"
+                      }
+                    }
+                  },
+                  "tensorboard": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "Extract TFDV training stats"
+              }
+            },
+            "get-current-time": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-get-current-time"
+              },
+              "inputs": {
+                "parameters": {
+                  "format_str": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "%Y%m%d%H%M%S"
+                      }
+                    }
+                  },
+                  "subtract_days": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "0"
+                      }
+                    }
+                  },
+                  "timestamp": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{{$.pipeline_job_create_time_utc}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "Format current timestamp"
               }
             },
             "get-data-version": {
@@ -678,6 +801,9 @@
               "type": "STRING"
             },
             "pipelineparam--models": {
+              "type": "STRING"
+            },
+            "pipelineparam--pipeline_files_gcs_path": {
               "type": "STRING"
             },
             "pipelineparam--project_id": {
@@ -819,13 +945,20 @@
                   "location": {
                     "componentInputParameter": "pipelineparam--project_location"
                   },
+                  "model_gcs_folder_path": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{{$.inputs.parameters['pipelineparam--pipeline_files_gcs_path']}}/models/master/57dfe73"
+                      }
+                    }
+                  },
                   "model_name": {
                     "componentInputParameter": "pipelineparam--models-loop-item"
                   },
                   "models_params": {
                     "runtimeValue": {
                       "constantValue": {
-                        "stringValue": "{\"logistic_regression\": {\"max_iter\": 500}, \"sgd_classifier\": {\"loss\": \"modified_huber\"}, \"xgboost\": {\"eval_metric\": \"logloss\", \"scale_pos_weight\": 10, \"verbosity\": 0}, \"lightgbm\": {\"verbosity\": 0, \"is_unbalance\": true}}"
+                        "stringValue": "{\"logistic_regression\": {\"max_iter\": 500}, \"sgd_classifier\": {\"loss\": \"modified_huber\"}, \"random_forest\": {\"n_jobs\": -1, \"class_weight\": \"balanced\", \"bootstrap\": true, \"max_samples\": 0.3, \"max_depth\": 6}, \"xgboost\": {\"eval_metric\": \"logloss\", \"scale_pos_weight\": 10, \"verbosity\": 0}, \"lightgbm\": {\"verbosity\": 0, \"is_unbalance\": true}}"
                       }
                     }
                   },
@@ -835,6 +968,9 @@
                         "stringValue": ""
                       }
                     }
+                  },
+                  "pipelineparam--pipeline_files_gcs_path": {
+                    "componentInputParameter": "pipelineparam--pipeline_files_gcs_path"
                   },
                   "project": {
                     "componentInputParameter": "pipelineparam--project_id"
@@ -865,6 +1001,90 @@
               "taskInfo": {
                 "name": "Train and evaluate models"
               }
+            },
+            "upload-model": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-upload-model"
+              },
+              "dependentTasks": [
+                "train-evaluate-model"
+              ],
+              "inputs": {
+                "artifacts": {
+                  "model": {
+                    "taskOutputArtifact": {
+                      "outputArtifactKey": "model",
+                      "producerTask": "train-evaluate-model"
+                    }
+                  }
+                },
+                "parameters": {
+                  "description": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "Credit card frauds model"
+                      }
+                    }
+                  },
+                  "display_name": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "credit-card-frauds"
+                      }
+                    }
+                  },
+                  "is_default_version": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "0"
+                      }
+                    }
+                  },
+                  "labels": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{\"timestamp\": \"{{$.inputs.parameters['pipelineparam--get-current-time-Output']}}\", \"pipeline_tag\": \"dev\", \"branch_name\": \"master\", \"commit_hash\": \"57dfe73\"}"
+                      }
+                    }
+                  },
+                  "model_id": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "credit-card-frauds"
+                      }
+                    }
+                  },
+                  "pipelineparam--get-current-time-Output": {
+                    "componentInputParameter": "pipelineparam--get-current-time-Output"
+                  },
+                  "project_id": {
+                    "componentInputParameter": "pipelineparam--project_id"
+                  },
+                  "project_location": {
+                    "componentInputParameter": "pipelineparam--project_location"
+                  },
+                  "serving_container_image_uri": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "europe-west2-docker.pkg.dev/robertofierimonte-ml-pipe/docker-repo/credit-card-frauds:latest"
+                      }
+                    }
+                  },
+                  "version_description": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "Credit card frauds model"
+                      }
+                    }
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "Upload model"
+              }
             }
           }
         },
@@ -890,10 +1110,16 @@
             }
           },
           "parameters": {
+            "pipelineparam--get-current-time-Output": {
+              "type": "STRING"
+            },
             "pipelineparam--models": {
               "type": "STRING"
             },
             "pipelineparam--models-loop-item": {
+              "type": "STRING"
+            },
+            "pipelineparam--pipeline_files_gcs_path": {
               "type": "STRING"
             },
             "pipelineparam--project_id": {
@@ -923,6 +1149,89 @@
                 "schemaTitle": "system.Metrics",
                 "schemaVersion": "0.0.1"
               }
+            }
+          }
+        }
+      },
+      "comp-generate-training-stats-schema": {
+        "executorLabel": "exec-generate-training-stats-schema",
+        "inputDefinitions": {
+          "artifacts": {
+            "training_data": {
+              "artifactType": {
+                "schemaTitle": "system.Dataset",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "artifacts_gcs_folder_path": {
+              "type": "STRING"
+            },
+            "base_output_directory": {
+              "type": "STRING"
+            },
+            "location": {
+              "type": "STRING"
+            },
+            "network": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            },
+            "service_account": {
+              "type": "STRING"
+            },
+            "target_column": {
+              "type": "STRING"
+            },
+            "tensorboard": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "training_schema": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "training_stats": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "gcp_resources": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-get-current-time": {
+        "executorLabel": "exec-get-current-time",
+        "inputDefinitions": {
+          "parameters": {
+            "format_str": {
+              "type": "STRING"
+            },
+            "subtract_days": {
+              "type": "INT"
+            },
+            "timestamp": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "parameters": {
+            "Output": {
+              "type": "STRING"
             }
           }
         }
@@ -983,6 +1292,9 @@
             "location": {
               "type": "STRING"
             },
+            "model_gcs_folder_path": {
+              "type": "STRING"
+            },
             "model_name": {
               "type": "STRING"
             },
@@ -1025,10 +1337,65 @@
                 "schemaTitle": "system.Metrics",
                 "schemaVersion": "0.0.1"
               }
+            },
+            "valid_pr_curve": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
             }
           },
           "parameters": {
             "gcp_resources": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-upload-model": {
+        "executorLabel": "exec-upload-model",
+        "inputDefinitions": {
+          "artifacts": {
+            "model": {
+              "artifactType": {
+                "schemaTitle": "system.Model",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "description": {
+              "type": "STRING"
+            },
+            "display_name": {
+              "type": "STRING"
+            },
+            "is_default_version": {
+              "type": "STRING"
+            },
+            "labels": {
+              "type": "STRING"
+            },
+            "model_id": {
+              "type": "STRING"
+            },
+            "project_id": {
+              "type": "STRING"
+            },
+            "project_location": {
+              "type": "STRING"
+            },
+            "serving_container_image_uri": {
+              "type": "STRING"
+            },
+            "version_description": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "parameters": {
+            "Output": {
               "type": "STRING"
             }
           }
@@ -1061,7 +1428,7 @@
             "command": [
               "sh",
               "-c",
-              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.1' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
               "sh",
               "-ec",
               "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
@@ -1081,7 +1448,7 @@
             "command": [
               "sh",
               "-c",
-              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.1' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
               "sh",
               "-ec",
               "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
@@ -1101,7 +1468,7 @@
             "command": [
               "sh",
               "-c",
-              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.1' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
               "sh",
               "-ec",
               "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
@@ -1141,7 +1508,7 @@
             "command": [
               "sh",
               "-c",
-              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.1' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
               "sh",
               "-ec",
               "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
@@ -1161,11 +1528,54 @@
             "command": [
               "sh",
               "-c",
-              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.1' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
               "sh",
               "-ec",
               "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
               "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef execute_query(\n    query: str,\n    bq_client_project_id: str,\n    dataset_location: str = \"europe-west2\",\n    query_job_config: dict = {},\n) -> None:\n    \"\"\"\n    Run a BQ query.\n\n    Args:\n        query (str): SQL query to execute.\n        bq_client_project_id (str): Project ID that will be used by the BQ client.\n        dataset_location (str): BQ dataset location.\n        query_job_config (dict): Dict containing optional parameters required\n            by the bq query operation. No need to specify destination param.\n            Defaults to {}.\n            See available parameters here\n            https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.QueryJobConfig.html\n    \"\"\"\n    from google.cloud import bigquery\n    from google.cloud.exceptions import GoogleCloudError\n    from loguru import logger\n\n    job_config = bigquery.QueryJobConfig(**query_job_config)\n\n    bq_client = bigquery.client.Client(\n        project=bq_client_project_id, location=dataset_location\n    )\n    query_job = bq_client.query(query, job_config=job_config)\n\n    try:\n        _ = query_job.result()\n        logger.info(\"BQ query executed.\")\n    except GoogleCloudError as e:\n        logger.error(e)\n        logger.error(query_job.error_result)\n        logger.error(query_job.errors)\n        raise e\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-generate-training-stats-schema": {
+          "container": {
+            "args": [
+              "--type",
+              "CustomJob",
+              "--payload",
+              "{\"display_name\": \"Generate training stats schema\", \"job_spec\": {\"worker_pool_specs\": [{\"machine_spec\": {\"machine_type\": \"n1-standard-16\"}, \"replica_count\": 1, \"container_spec\": {\"image_uri\": \"python:3.9\", \"command\": [\"sh\", \"-c\", \"\\nif ! [ -x \\\"$(command -v pip)\\\" ]; then\\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\\nfi\\n\\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'pyarrow==6.0.1' 'pandas==1.4.3' 'tensorflow-data-validation==1.13.0' 'kfp==1.8.22' && \\\"$0\\\" \\\"$@\\\"\\n\", \"sh\", \"-ec\", \"program_path=$(mktemp -d)\\nprintf \\\"%s\\\" \\\"$0\\\" > \\\"$program_path/ephemeral_component.py\\\"\\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \\\"$program_path/ephemeral_component.py\\\"                         \\\"$@\\\"\\n\", \"\\nimport kfp\\nfrom kfp.v2 import dsl\\nfrom kfp.v2.dsl import *\\nfrom typing import *\\n\\ndef generate_training_stats_schema(\\n    training_data: Input[Dataset],\\n    training_stats: Output[Artifact],\\n    training_schema: Output[Artifact],\\n    target_column: str,\\n    artifacts_gcs_folder_path: str = None\\n) -> None:\\n    \\\"\\\"\\\"_summary_\\n\\n    Args:\\n        training_data (Input[Dataset]): _description_\\n        training_stats (Output[Artifact]): _description_\\n        training_schema (Output[Artifact]): _description_\\n        target_column (str): _description_\\n        artifacts_gcs_folder_path (str, optional): _description_. Defaults to None.\\n    \\\"\\\"\\\"\\n    from pathlib import Path\\n\\n    import pandas as pd\\n    import tensorflow_data_validation as tfdv\\n\\n    df_train = pd.read_parquet(training_data.path)\\n    df_train = df_train.drop(columns=[\\\"transaction_id\\\"])\\n    stats_train = tfdv.generate_statistics_from_dataframe(df_train)\\n    schema_train = tfdv.infer_schema(stats_train)\\n    schema_train.default_environment.append(\\\"TRAINING\\\")\\n    schema_train.default_environment.append(\\\"SERVING\\\")\\n\\n    tfdv.get_feature(schema_train, target_column).not_in_environment.append(\\\"SERVING\\\")\\n\\n    if artifacts_gcs_folder_path is not None:\\n        training_stats.path = artifacts_gcs_folder_path\\n        training_schema.path = artifacts_gcs_folder_path\\n\\n    training_stats.path = str(Path(training_stats.path) / \\\"training_stats.pbtxt\\\")\\n    directory = Path(training_stats.path).parent.absolute()\\n    directory.mkdir(parents=True, exist_ok=True)\\n\\n    training_schema.path = str(Path(training_schema.path) / \\\"training_schema.pbtxt\\\")\\n    directory = Path(training_schema.path).parent.absolute()\\n    directory.mkdir(parents=True, exist_ok=True)\\n\\n    tfdv.write_stats_text(stats_train, training_stats.path)\\n    tfdv.write_schema_text(schema_train, training_schema.path)\\n\\n\"], \"args\": [\"--executor_input\", \"{{$.json_escape[1]}}\", \"--function_to_execute\", \"generate_training_stats_schema\"]}, \"disk_spec\": {\"boot_disk_type\": \"pd-ssd\", \"boot_disk_size_gb\": 100}}], \"service_account\": \"{{$.inputs.parameters['service_account']}}\", \"network\": \"{{$.inputs.parameters['network']}}\", \"tensorboard\": \"{{$.inputs.parameters['tensorboard']}}\", \"base_output_directory\": {\"output_uri_prefix\": \"{{$.inputs.parameters['base_output_directory']}}\"}}}",
+              "--project",
+              "{{$.inputs.parameters['project']}}",
+              "--location",
+              "{{$.inputs.parameters['location']}}",
+              "--gcp_resources",
+              "{{$.outputs.parameters['gcp_resources'].output_file}}"
+            ],
+            "command": [
+              "python3",
+              "-u",
+              "-m",
+              "google_cloud_pipeline_components.container.v1.custom_job.launcher"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.44"
+          }
+        },
+        "exec-get-current-time": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "get_current_time"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef get_current_time(\n    timestamp: Optional[str] = None,\n    format_str: Optional[str] = None,\n    subtract_days: int = 0,\n) -> str:\n    \"\"\"Create timestamp for filtering the data in the pipelines.\n\n    If `timestamp` is empty, return the current time (UTC+0) in ISO 8601 format.\n    Otherwise, return the formatted `timestamp`. If `timestamp` is provided, it\n    must follow ISO 8601 format (e.g. 2023-05-21T19:00:00). The date part is\n    mandatory while any missing part in the time part will be regarded as zero.\n\n    Args:\n        timestamp (Optional[str], optional): Timestamp in ISO 8601 format.\n            Defaults to None.\n        format_str (Optional[str], optional): Formatting string for the output,\n            must be compatible with datetime. Defaults to None.\n        subtract_days (int, optional): Number of days to subtract from the\n            current timestamp. Only used if `timestamp` is None. Defaults to 0.\n\n    Returns:\n        str: Formatted input timestamp\n    \"\"\"\n    from datetime import datetime, timedelta, timezone\n\n    from loguru import logger\n\n    if not timestamp:\n        dt = datetime.now(timezone.utc) - timedelta(days=subtract_days)\n\n        if not format_str:\n            return dt.isoformat()\n        else:\n            return dt.strftime(format=format_str)\n\n    else:\n        logger.info(f\"timestamp: {timestamp}.\")\n        try:\n            timestamp = timestamp.replace(\"Z\", \"+00:00\")\n            dt = datetime.fromisoformat(timestamp)\n            logger.info(f\"Timestamp in ISO 8601 format: {dt}.\")\n            if not format_str:\n                return dt.isoformat()\n            else:\n                return dt.strftime(format=format_str)\n        except ValueError:\n            err = \"Timestamp is not in the correct ISO 8601 format \"\n            logger.error(err)\n            raise ValueError(err)\n\n"
             ],
             "image": "python:3.9"
           }
@@ -1181,7 +1591,7 @@
             "command": [
               "sh",
               "-c",
-              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-bigquery==3.11.1' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
               "sh",
               "-ec",
               "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
@@ -1196,7 +1606,7 @@
               "--type",
               "CustomJob",
               "--payload",
-              "{\"display_name\": \"Train evaluate model\", \"job_spec\": {\"worker_pool_specs\": [{\"machine_spec\": {\"machine_type\": \"n1-standard-32\"}, \"replica_count\": 1, \"container_spec\": {\"image_uri\": \"europe-west2-docker.pkg.dev/robertofierimonte-ml-pipe/docker-repo/credit-card-frauds:latest\", \"command\": [\"sh\", \"-c\", \"\\nif ! [ -x \\\"$(command -v pip)\\\" ]; then\\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\\nfi\\n\\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.22' && \\\"$0\\\" \\\"$@\\\"\\n\", \"sh\", \"-ec\", \"program_path=$(mktemp -d)\\nprintf \\\"%s\\\" \\\"$0\\\" > \\\"$program_path/ephemeral_component.py\\\"\\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \\\"$program_path/ephemeral_component.py\\\"                         \\\"$@\\\"\\n\", \"\\nimport kfp\\nfrom kfp.v2 import dsl\\nfrom kfp.v2.dsl import *\\nfrom typing import *\\n\\ndef train_evaluate_model(\\n    training_data: Input[Dataset],\\n    validation_data: Input[Dataset],\\n    target_column: str,\\n    model_name: str,\\n    train_metrics: Output[Metrics],\\n    valid_metrics: Output[Metrics],\\n    model: Output[Model],\\n    models_params: dict = {},\\n    fit_args: dict = {},\\n    data_processing_args: dict = {},\\n) -> None:\\n    \\\"\\\"\\\"Train a classification model on the training data.\\n\\n    Args:\\n        training_data (Input[Dataset]): Training data as a KFP Dataset object.\\n        validation_data (Input[Dataset]): Validation data (used to prevent overfitting)\\n            as a KFP Dataset object.\\n        target_column (str): Column containing the target column for classification.\\n        model_name (str): Name of the classifier that will be trained. Must be one of\\n            'logistic_regression', 'sgd_classifier', 'random_forest', 'lightgbm',\\n            'xgboost'.\\n        models_params (dict): Hyperparameters of the model. Default to an empty dict.\\n        fit_args (dict): Arguments used when fitting the model.\\n            Default to an empty dict.\\n        data_processing_args (dict): Arguments used when running extra processing on\\n            the data (such as scaling or oversampling). Default to an empty dict.\\n        train_metrics (Output[Metrics]):\\n        valid_metrics (Output[Metrics]):\\n        model (Output[Model]): Output model as a KFP Model object, this parameter\\n            will be passed automatically by the orchestrator. The .path\\n            attribute is the location of the joblib file in GCS.\\n    \\\"\\\"\\\"\\n    import os\\n    from pathlib import Path\\n\\n    import joblib\\n    import pandas as pd\\n    from lightgbm import LGBMClassifier\\n    from loguru import logger\\n    from sklearn.ensemble import RandomForestClassifier\\n    from sklearn.linear_model import LogisticRegression, SGDClassifier\\n    from xgboost import XGBClassifier\\n\\n    from src.base.model import evaluate_model, train_model\\n\\n    df_train = pd.read_parquet(training_data.path)\\n    df_train = df_train.drop(columns=[\\\"transaction_id\\\"])\\n    y_train = df_train.pop(target_column)\\n    logger.info(f\\\"Loaded training data, shape {df_train.shape}.\\\")\\n\\n    df_valid = pd.read_parquet(validation_data.path)\\n    df_valid = df_valid.drop(columns=[\\\"transaction_id\\\"])\\n    y_valid = df_valid.pop(target_column)\\n    logger.info(f\\\"Loaded evaluation data, shape {df_valid.shape}.\\\")\\n\\n    use_eval_set = False\\n    model_params = models_params.get(model_name, {})\\n    if model_name == \\\"logistic_regression\\\":\\n        classifier = LogisticRegression(random_state=42, **model_params)\\n    elif model_name == \\\"sgd_classifier\\\":\\n        classifier = SGDClassifier(random_state=42, **model_params)\\n    elif model_name == \\\"random_forest\\\":\\n        classifier = RandomForestClassifier(random_state=42, **model_params)\\n    elif model_name == \\\"lightgbm\\\":\\n        classifier = LGBMClassifier(random_state=42, **model_params)\\n        use_eval_set = True\\n    elif model_name == \\\"xgboost\\\":\\n        classifier = XGBClassifier(\\n            use_label_encoder=False, random_state=42, **model_params\\n        )\\n        use_eval_set = True\\n    else:\\n        msg = (\\n            \\\"`model_name` must be one of 'logistic_regression', 'sgd_classifier', \\\"\\n            \\\"'random_forest', 'lightgbm', 'xgboost'.\\\"\\n        )\\n        logger.error(msg)\\n        raise ValueError(msg)\\n\\n    logger.info(f\\\"Training model {model_name}.\\\")\\n    classifier, training_metrics = train_model(\\n        classifier,\\n        X_train=df_train,\\n        y_train=y_train,\\n        X_valid=df_valid,\\n        y_valid=y_valid,\\n        use_eval_set=use_eval_set,\\n        fit_args=fit_args.get(model_name, {}),\\n        **data_processing_args,\\n    )\\n    logger.info(\\\"Training completed.\\\")\\n    logger.debug(f\\\"Type of classifier: {type(classifier)}.\\\")\\n    logger.debug(f\\\"Classifier: {classifier}.\\\")\\n    for k, v in training_metrics.items():\\n        if k != \\\"Precision Recall Curve\\\":\\n            train_metrics.log_metric(k, v)\\n\\n    validation_metrics, _, _ = evaluate_model(classifier, df_valid, y_valid)\\n    logger.info(\\\"Evaluation completed.\\\")\\n    for k, v in validation_metrics.items():\\n        if k != \\\"Precision Recall Curve\\\":\\n            valid_metrics.log_metric(k, v)\\n\\n    logger.debug(f\\\"Type of classifier: {type(classifier)}.\\\")\\n    logger.debug(f\\\"Classifier: {classifier}.\\\")\\n    model.path = model.path + f\\\"/{model_name}\\\"\\n    model_dir = Path(model.path).parent.absolute()\\n    os.makedirs(model_dir, exist_ok=True)\\n\\n    logger.info(f\\\"Saving model to {model.path}.\\\")\\n    joblib.dump(classifier, model.path)\\n\\n\"], \"args\": [\"--executor_input\", \"{{$.json_escape[1]}}\", \"--function_to_execute\", \"train_evaluate_model\"]}, \"disk_spec\": {\"boot_disk_type\": \"pd-ssd\", \"boot_disk_size_gb\": 100}}], \"service_account\": \"{{$.inputs.parameters['service_account']}}\", \"network\": \"{{$.inputs.parameters['network']}}\", \"tensorboard\": \"{{$.inputs.parameters['tensorboard']}}\", \"base_output_directory\": {\"output_uri_prefix\": \"{{$.inputs.parameters['base_output_directory']}}\"}}}",
+              "{\"display_name\": \"Train evaluate model\", \"job_spec\": {\"worker_pool_specs\": [{\"machine_spec\": {\"machine_type\": \"n1-standard-32\"}, \"replica_count\": 1, \"container_spec\": {\"image_uri\": \"europe-west2-docker.pkg.dev/robertofierimonte-ml-pipe/docker-repo/credit-card-frauds:latest\", \"command\": [\"sh\", \"-c\", \"\\nif ! [ -x \\\"$(command -v pip)\\\" ]; then\\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\\nfi\\n\\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-storage==2.9.0' 'matplotlib==3.5.1' 'kfp==1.8.22' && \\\"$0\\\" \\\"$@\\\"\\n\", \"sh\", \"-ec\", \"program_path=$(mktemp -d)\\nprintf \\\"%s\\\" \\\"$0\\\" > \\\"$program_path/ephemeral_component.py\\\"\\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \\\"$program_path/ephemeral_component.py\\\"                         \\\"$@\\\"\\n\", \"\\nimport kfp\\nfrom kfp.v2 import dsl\\nfrom kfp.v2.dsl import *\\nfrom typing import *\\n\\ndef train_evaluate_model(\\n    training_data: Input[Dataset],\\n    validation_data: Input[Dataset],\\n    target_column: str,\\n    model_name: str,\\n    train_metrics: Output[Metrics],\\n    valid_metrics: Output[Metrics],\\n    valid_pr_curve: Output[Artifact],\\n    model: Output[Model],\\n    models_params: dict = {},\\n    fit_args: dict = {},\\n    data_processing_args: dict = {},\\n    model_gcs_folder_path: str = None,\\n) -> None:\\n    \\\"\\\"\\\"Train a classification model on the training data.\\n\\n    Args:\\n        training_data (Input[Dataset]): Training data as a KFP Dataset object.\\n        validation_data (Input[Dataset]): Validation data (used to prevent overfitting)\\n            as a KFP Dataset object.\\n        target_column (str): Column containing the target column for classification.\\n        model_name (str): Name of the classifier that will be trained. Must be one of\\n            'logistic_regression', 'sgd_classifier', 'random_forest', 'lightgbm',\\n            'xgboost'.\\n        models_params (dict): Hyperparameters of the model. Default to an empty dict.\\n        fit_args (dict): Arguments used when fitting the model.\\n            Default to an empty dict.\\n        data_processing_args (dict): Arguments used when running extra processing on\\n            the data (such as scaling or oversampling). Default to an empty dict.\\n        train_metrics (Output[Metrics]):\\n        valid_metrics (Output[Metrics]):\\n        model (Output[Model]): Output model as a KFP Model object, this parameter\\n            will be passed automatically by the orchestrator. The .path\\n            attribute is the location of the joblib file in GCS.\\n    \\\"\\\"\\\"\\n    import os\\n    from pathlib import Path\\n\\n    import joblib\\n    import pandas as pd\\n    from google.cloud import storage\\n    from lightgbm import LGBMClassifier\\n    from loguru import logger\\n    from sklearn.ensemble import RandomForestClassifier\\n    from sklearn.linear_model import LogisticRegression, SGDClassifier\\n    from xgboost import XGBClassifier\\n\\n    from src.base.model import evaluate_model, train_model\\n    from src.base.visualisation import plot_precision_recall_curve\\n\\n    df_train = pd.read_parquet(training_data.path)\\n    df_train = df_train.drop(columns=[\\\"transaction_id\\\"])\\n    y_train = df_train.pop(target_column)\\n    logger.info(f\\\"Loaded training data, shape {df_train.shape}.\\\")\\n\\n    df_valid = pd.read_parquet(validation_data.path)\\n    df_valid = df_valid.drop(columns=[\\\"transaction_id\\\"])\\n    y_valid = df_valid.pop(target_column)\\n    logger.info(f\\\"Loaded evaluation data, shape {df_valid.shape}.\\\")\\n\\n    use_eval_set = False\\n    model_params = models_params.get(model_name, {})\\n    if model_name == \\\"logistic_regression\\\":\\n        classifier = LogisticRegression(random_state=42, **model_params)\\n    elif model_name == \\\"sgd_classifier\\\":\\n        classifier = SGDClassifier(random_state=42, **model_params)\\n    elif model_name == \\\"random_forest\\\":\\n        classifier = RandomForestClassifier(random_state=42, **model_params)\\n    elif model_name == \\\"lightgbm\\\":\\n        classifier = LGBMClassifier(random_state=42, **model_params)\\n        use_eval_set = True\\n    elif model_name == \\\"xgboost\\\":\\n        classifier = XGBClassifier(\\n            use_label_encoder=False, random_state=42, **model_params\\n        )\\n        use_eval_set = True\\n    else:\\n        msg = (\\n            \\\"`model_name` must be one of 'logistic_regression', 'sgd_classifier', \\\"\\n            \\\"'random_forest', 'lightgbm', 'xgboost'.\\\"\\n        )\\n        logger.error(msg)\\n        raise ValueError(msg)\\n\\n    logger.info(f\\\"Training model {model_name}.\\\")\\n    classifier, training_metrics = train_model(\\n        classifier,\\n        X_train=df_train,\\n        y_train=y_train,\\n        X_valid=df_valid,\\n        y_valid=y_valid,\\n        use_eval_set=use_eval_set,\\n        fit_args=fit_args.get(model_name, {}),\\n        **data_processing_args,\\n    )\\n    logger.info(\\\"Training completed.\\\")\\n    logger.debug(f\\\"Type of classifier: {type(classifier)}.\\\")\\n    logger.debug(f\\\"Classifier: {classifier}.\\\")\\n    for k, v in training_metrics.items():\\n        if k != \\\"Precision Recall Curve\\\":\\n            train_metrics.log_metric(k, v)\\n\\n    validation_metrics, _, _ = evaluate_model(classifier, df_valid, y_valid)\\n    logger.info(\\\"Evaluation completed.\\\")\\n    for k, v in validation_metrics.items():\\n        if k != \\\"Precision Recall Curve\\\":\\n            valid_metrics.log_metric(k, v)\\n\\n    logger.debug(f\\\"Type of classifier: {type(classifier)}.\\\")\\n    logger.debug(f\\\"Classifier: {classifier}.\\\")\\n\\n    if model_gcs_folder_path is not None:\\n        model.path = model_gcs_folder_path\\n        valid_pr_curve.path = model_gcs_folder_path\\n\\n    model.path = model.path + f\\\"/{model_name}\\\"\\n    model_dir = Path(model.path).parent.absolute()\\n    os.makedirs(model_dir, exist_ok=True)\\n\\n    logger.info(f\\\"Saving model to {model.path}.\\\")\\n    joblib.dump(classifier, model.path)\\n\\n    valid_pr_curve.path = (\\n        valid_pr_curve.path + f\\\"/precision_recall_curve_{model_name}.png\\\"\\n    )\\n    _ = plot_precision_recall_curve(\\n        model=classifier,\\n        model_name=model_name,\\n        X=df_valid,\\n        y=y_valid,\\n        save_path=valid_pr_curve.path,\\n    )\\n\\n    client = storage.Client()\\n    logger.debug(f\\\"URI: {valid_pr_curve.uri}\\\")\\n    logger.debug(f\\\"Path: {valid_pr_curve.path}\\\")\\n\\n\"], \"args\": [\"--executor_input\", \"{{$.json_escape[1]}}\", \"--function_to_execute\", \"train_evaluate_model\"]}, \"disk_spec\": {\"boot_disk_type\": \"pd-ssd\", \"boot_disk_size_gb\": 100}}], \"service_account\": \"{{$.inputs.parameters['service_account']}}\", \"network\": \"{{$.inputs.parameters['network']}}\", \"tensorboard\": \"{{$.inputs.parameters['tensorboard']}}\", \"base_output_directory\": {\"output_uri_prefix\": \"{{$.inputs.parameters['base_output_directory']}}\"}}}",
               "--project",
               "{{$.inputs.parameters['project']}}",
               "--location",
@@ -1211,6 +1621,26 @@
               "google_cloud_pipeline_components.container.v1.custom_job.launcher"
             ],
             "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.44"
+          }
+        },
+        "exec-upload-model": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "upload_model"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-aiplatform==1.26.0' 'loguru==0.7.0' 'kfp==1.8.22' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef upload_model(\n    model_id: str,\n    display_name: str,\n    serving_container_image_uri: str,\n    project_id: str,\n    project_location: str,\n    model: Input[Model],\n    labels: dict,\n    description: str,\n    is_default_version: bool,\n    version_description: str,\n    version_alias: str = None,\n) -> str:\n    \"\"\"Upload a model from GCS to the Vertex AI model registry.\n\n    Args:\n        model_id (str): The ID (name) of the model.\n        display_name (str): The display name of the model. The name\n        serving_container_image_uri (str): The URI of the model serving container.\n            Must come from the GCP Container Registry or Artifact Registry.\n        project_id (str): GCP Project ID where the model will be saved.\n        project_location (str): Location where the model will be saved.\n        model (Input[Model]): Model to be uploaded.\n        labels (dict): Labels with user-defined metadata to organise the model.\n        description (str): Description of the model.\n        is_default_version (bool): When set to True, the newly uploaded model version\n            will automatically have alias \"default\" included. When set to False, the\n            \"default\" alias will not be moved\n        version_description (str): Description of the version of the model being\n            uploaded.\n        version_alias (str, optional): User provided version alias so that a model\n            version can be referenced via alias instead of auto-generated version ID.\n            Defaults to None.\n\n    Returns:\n        str: Resource name of the exported model\n    \"\"\"\n    from google.api_core.exceptions import NotFound\n    from google.cloud.aiplatform import Model\n    from loguru import logger\n\n    # The URI expects a folder containing the model binaries\n    model_uri = model.uri.rsplit(\"/\", 1)[0]\n\n    # If a model with the same id exists, use it as the parent model\n    try:\n        result_model = Model(\n            model_name=model_id, project=project_id, location=project_location\n        )\n        parent_model = result_model.resource_name\n    except (NotFound, ValueError):\n        logger.info(\"Parent model not found.\")\n        parent_model = None\n\n    if version_alias is not None:\n        version_alias = [version_alias]\n\n    logger.debug(f\"Labels: {labels}\")\n    logger.info(\"Uploading model to model registry.\")\n    model = Model.upload(\n        model_id=model_id,\n        project=project_id,\n        location=project_location,\n        display_name=display_name,\n        parent_model=parent_model,\n        version_aliases=version_alias,\n        is_default_version=is_default_version,\n        serving_container_image_uri=serving_container_image_uri,\n        artifact_uri=model_uri,\n        description=description,\n        version_description=version_description,\n        labels=labels,\n        sync=True,\n    )\n    logger.info(f\"Uploaded model {model}.\")\n    return model.resource_name\n\n"
+            ],
+            "image": "python:3.9"
           }
         },
         "exec-vertex-pipelines-notification-email": {
@@ -1233,7 +1663,7 @@
       }
     },
     "pipelineInfo": {
-      "name": "frauds-training-pipeline-dev"
+      "name": "frauds-training-pipeline-master-57dfe73"
     },
     "root": {
       "dag": {
@@ -1283,6 +1713,9 @@
                 },
                 "pipelineparam--models": {
                   "componentInputParameter": "models"
+                },
+                "pipelineparam--pipeline_files_gcs_path": {
+                  "componentInputParameter": "pipeline_files_gcs_path"
                 },
                 "pipelineparam--project_id": {
                   "componentInputParameter": "project_id"
@@ -1384,7 +1817,7 @@
         "stringValue": "[\"roberto.fierimonte.spam@gmail.com\"]"
       },
       "models": {
-        "stringValue": "[\"logistic_regression\", \"sgd_classifier\"]"
+        "stringValue": "[\"sgd_classifier\"]"
       }
     }
   }

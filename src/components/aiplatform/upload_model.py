@@ -67,6 +67,7 @@ def upload_model(
     if version_alias is not None:
         version_alias = [version_alias]
 
+    logger.debug(f"Labels: {labels}")
     logger.info("Uploading model to model registry.")
     model = Model.upload(
         model_id=model_id,

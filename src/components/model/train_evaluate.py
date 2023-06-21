@@ -1,12 +1,17 @@
 from pathlib import Path
 
-from kfp.v2.dsl import Dataset, Input, Metrics, Model, Output, component
+from kfp.v2.dsl import Artifact, Dataset, Input, Metrics, Model, Output, component
 
-from src.components.dependencies import PIPELINE_IMAGE_NAME
+from src.components.dependencies import (
+    GOOGLE_CLOUD_STORAGE,
+    MATPLOTLIB,
+    PIPELINE_IMAGE_NAME,
+)
 
 
 @component(
     base_image=PIPELINE_IMAGE_NAME,
+    packages_to_install=[GOOGLE_CLOUD_STORAGE, MATPLOTLIB],
     output_component_file=str(Path(__file__).with_suffix(".yaml")),
 )
 def train_evaluate_model(
@@ -16,10 +21,12 @@ def train_evaluate_model(
     model_name: str,
     train_metrics: Output[Metrics],
     valid_metrics: Output[Metrics],
+    valid_pr_curve: Output[Artifact],
     model: Output[Model],
     models_params: dict = {},
     fit_args: dict = {},
     data_processing_args: dict = {},
+    model_gcs_folder_path: str = None,
 ) -> None:
     """Train a classification model on the training data.
 
@@ -47,6 +54,7 @@ def train_evaluate_model(
 
     import joblib
     import pandas as pd
+    from google.cloud import storage
     from lightgbm import LGBMClassifier
     from loguru import logger
     from sklearn.ensemble import RandomForestClassifier
@@ -54,6 +62,7 @@ def train_evaluate_model(
     from xgboost import XGBClassifier
 
     from src.base.model import evaluate_model, train_model
+    from src.base.visualisation import plot_precision_recall_curve
 
     df_train = pd.read_parquet(training_data.path)
     df_train = df_train.drop(columns=["transaction_id"])
@@ -115,9 +124,29 @@ def train_evaluate_model(
 
     logger.debug(f"Type of classifier: {type(classifier)}.")
     logger.debug(f"Classifier: {classifier}.")
+
+    if model_gcs_folder_path is not None:
+        model.path = model_gcs_folder_path
+        valid_pr_curve.path = model_gcs_folder_path
+
     model.path = model.path + f"/{model_name}"
     model_dir = Path(model.path).parent.absolute()
     os.makedirs(model_dir, exist_ok=True)
 
     logger.info(f"Saving model to {model.path}.")
     joblib.dump(classifier, model.path)
+
+    valid_pr_curve.path = (
+        valid_pr_curve.path + f"/precision_recall_curve_{model_name}.png"
+    )
+    _ = plot_precision_recall_curve(
+        model=classifier,
+        model_name=model_name,
+        X=df_valid,
+        y=y_valid,
+        save_path=valid_pr_curve.path,
+    )
+
+    client = storage.Client()
+    logger.debug(f"URI: {valid_pr_curve.uri}")
+    logger.debug(f"Path: {valid_pr_curve.path}")
