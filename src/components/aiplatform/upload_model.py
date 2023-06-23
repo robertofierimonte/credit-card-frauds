@@ -21,7 +21,8 @@ def upload_model(
     description: str,
     is_default_version: bool,
     version_description: str,
-    version_alias: str = None,
+    version_alias: list = [],
+    model_name: str = None,
 ) -> str:
     """Upload a model from GCS to the Vertex AI model registry.
 
@@ -43,6 +44,7 @@ def upload_model(
         version_alias (str, optional): User provided version alias so that a model
             version can be referenced via alias instead of auto-generated version ID.
             Defaults to None.
+        model_name (str, optional):
 
     Returns:
         str: Resource name of the exported model
@@ -64,9 +66,17 @@ def upload_model(
         logger.info("Parent model not found.")
         parent_model = None
 
-    if version_alias is not None:
-        version_alias = [version_alias]
+    if "data_version" in labels:
+        labels["data_version"] = labels["data_version"].replace("T", "")
+    if model_name is not None:
+        version_alias.append(
+            f"{model_name.replace('_', '-')}-{labels.get('timestamp', 'no-timestamp')}"
+        )
+        labels["model_name"] = model_name
+    if version_alias == []:
+        version_alias = None
 
+    logger.debug(f"Version aliases: {version_alias}")
     logger.debug(f"Labels: {labels}")
     logger.info("Uploading model to model registry.")
     model = Model.upload(

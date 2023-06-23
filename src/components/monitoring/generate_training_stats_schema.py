@@ -6,7 +6,7 @@ from src.components.dependencies import PANDAS, PYARROW, PYTHON, TFDV
 
 
 @component(
-    base_image=PYTHON, 
+    base_image=PYTHON,
     packages_to_install=[PYARROW, PANDAS, TFDV],
     output_component_file=str(Path(__file__).with_suffix(".yaml")),
 )
@@ -15,7 +15,7 @@ def generate_training_stats_schema(
     training_stats: Output[Artifact],
     training_schema: Output[Artifact],
     target_column: str,
-    artifacts_gcs_folder_path: str = None
+    artifacts_gcs_folder_path: str = None,
 ) -> None:
     """_summary_
 
@@ -47,12 +47,10 @@ def generate_training_stats_schema(
     training_stats.path = str(Path(training_stats.path) / "training_stats.pbtxt")
     directory = Path(training_stats.path).parent.absolute()
     directory.mkdir(parents=True, exist_ok=True)
-    
+
     training_schema.path = str(Path(training_schema.path) / "training_schema.pbtxt")
     directory = Path(training_schema.path).parent.absolute()
     directory.mkdir(parents=True, exist_ok=True)
 
     tfdv.write_stats_text(stats_train, training_stats.path)
     tfdv.write_schema_text(schema_train, training_schema.path)
-
-

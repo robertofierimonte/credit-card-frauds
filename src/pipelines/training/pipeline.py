@@ -39,11 +39,11 @@ def training_pipeline(
     data_version: str,
     pipeline_files_gcs_path: str,
     models: list = [
-        # "logistic_regression",
+        "logistic_regression",
         "sgd_classifier",
-        # "random_forest",
-        # "xgboost",
-        # "lightgbm",
+        "random_forest",
+        "xgboost",
+        "lightgbm",
     ],
     email_notification_recipients: list = [
         "roberto.fierimonte.spam@gmail.com",
@@ -95,9 +95,14 @@ def training_pipeline(
             .set_caching_options(True)
         )
 
-        current_timestamp = get_current_time(
-            timestamp="{{$.pipeline_job_create_time_utc}}", format_str="%Y%m%d%H%M%S"
-        ).set_display_name("Format current timestamp")
+        current_timestamp = (
+            get_current_time(
+                timestamp="{{$.pipeline_job_create_time_utc}}",
+                format_str="%Y%m%d%H%M%S",
+            )
+            .set_display_name("Format current timestamp")
+            .set_caching_options(False)
+        )
 
         dataset_name = f"{project_id}.{dataset_id}_{data_version.output}"
         transactions_table = f"{dataset_name}.transactions"
@@ -269,13 +274,13 @@ def training_pipeline(
                             pipeline_tag=PIPELINE_TAG,
                             branch_name=BRANCH_NAME,
                             commit_hash=COMMIT_HASH,
-                            # data_version=f"{data_version.output}",
-                            # model_name=item
+                            data_version=f"{data_version.output}",
                         )
                     ),
                     description="Credit card frauds model",
                     is_default_version=False,
                     version_description="Credit card frauds model",
+                    model_name=item,
                 )
                 .after(train)
                 .set_display_name("Upload model")

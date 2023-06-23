@@ -590,7 +590,8 @@
                 "bq-table-to-dataset",
                 "bq-table-to-dataset-2",
                 "bq-table-to-dataset-3",
-                "get-current-time"
+                "get-current-time",
+                "get-data-version"
               ],
               "inputs": {
                 "artifacts": {
@@ -618,6 +619,12 @@
                     "taskOutputParameter": {
                       "outputParameterKey": "Output",
                       "producerTask": "get-current-time"
+                    }
+                  },
+                  "pipelineparam--get-data-version-Output": {
+                    "taskOutputParameter": {
+                      "outputParameterKey": "Output",
+                      "producerTask": "get-data-version"
                     }
                   },
                   "pipelineparam--models": {
@@ -670,7 +677,7 @@
                   "artifacts_gcs_folder_path": {
                     "runtimeValue": {
                       "constantValue": {
-                        "stringValue": "{{$.inputs.parameters['pipelineparam--pipeline_files_gcs_path']}}/artifacts/master/57dfe73"
+                        "stringValue": "{{$.inputs.parameters['pipelineparam--pipeline_files_gcs_path']}}/artifacts/master/64c23ac"
                       }
                     }
                   },
@@ -948,7 +955,7 @@
                   "model_gcs_folder_path": {
                     "runtimeValue": {
                       "constantValue": {
-                        "stringValue": "{{$.inputs.parameters['pipelineparam--pipeline_files_gcs_path']}}/models/master/57dfe73"
+                        "stringValue": "{{$.inputs.parameters['pipelineparam--pipeline_files_gcs_path']}}/models/master/64c23ac"
                       }
                     }
                   },
@@ -1046,7 +1053,7 @@
                   "labels": {
                     "runtimeValue": {
                       "constantValue": {
-                        "stringValue": "{\"timestamp\": \"{{$.inputs.parameters['pipelineparam--get-current-time-Output']}}\", \"pipeline_tag\": \"dev\", \"branch_name\": \"master\", \"commit_hash\": \"57dfe73\"}"
+                        "stringValue": "{\"timestamp\": \"{{$.inputs.parameters['pipelineparam--get-current-time-Output']}}\", \"pipeline_tag\": \"dev\", \"branch_name\": \"master\", \"commit_hash\": \"64c23ac\", \"data_version\": \"{{$.inputs.parameters['pipelineparam--get-data-version-Output']}}\"}"
                       }
                     }
                   },
@@ -1057,8 +1064,14 @@
                       }
                     }
                   },
+                  "model_name": {
+                    "componentInputParameter": "pipelineparam--models-loop-item"
+                  },
                   "pipelineparam--get-current-time-Output": {
                     "componentInputParameter": "pipelineparam--get-current-time-Output"
+                  },
+                  "pipelineparam--get-data-version-Output": {
+                    "componentInputParameter": "pipelineparam--get-data-version-Output"
                   },
                   "project_id": {
                     "componentInputParameter": "pipelineparam--project_id"
@@ -1070,6 +1083,13 @@
                     "runtimeValue": {
                       "constantValue": {
                         "stringValue": "europe-west2-docker.pkg.dev/robertofierimonte-ml-pipe/docker-repo/credit-card-frauds:latest"
+                      }
+                    }
+                  },
+                  "version_alias": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "[]"
                       }
                     }
                   },
@@ -1111,6 +1131,9 @@
           },
           "parameters": {
             "pipelineparam--get-current-time-Output": {
+              "type": "STRING"
+            },
+            "pipelineparam--get-data-version-Output": {
               "type": "STRING"
             },
             "pipelineparam--models": {
@@ -1379,6 +1402,9 @@
             "model_id": {
               "type": "STRING"
             },
+            "model_name": {
+              "type": "STRING"
+            },
             "project_id": {
               "type": "STRING"
             },
@@ -1386,6 +1412,9 @@
               "type": "STRING"
             },
             "serving_container_image_uri": {
+              "type": "STRING"
+            },
+            "version_alias": {
               "type": "STRING"
             },
             "version_description": {
@@ -1638,7 +1667,7 @@
               "sh",
               "-ec",
               "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef upload_model(\n    model_id: str,\n    display_name: str,\n    serving_container_image_uri: str,\n    project_id: str,\n    project_location: str,\n    model: Input[Model],\n    labels: dict,\n    description: str,\n    is_default_version: bool,\n    version_description: str,\n    version_alias: str = None,\n) -> str:\n    \"\"\"Upload a model from GCS to the Vertex AI model registry.\n\n    Args:\n        model_id (str): The ID (name) of the model.\n        display_name (str): The display name of the model. The name\n        serving_container_image_uri (str): The URI of the model serving container.\n            Must come from the GCP Container Registry or Artifact Registry.\n        project_id (str): GCP Project ID where the model will be saved.\n        project_location (str): Location where the model will be saved.\n        model (Input[Model]): Model to be uploaded.\n        labels (dict): Labels with user-defined metadata to organise the model.\n        description (str): Description of the model.\n        is_default_version (bool): When set to True, the newly uploaded model version\n            will automatically have alias \"default\" included. When set to False, the\n            \"default\" alias will not be moved\n        version_description (str): Description of the version of the model being\n            uploaded.\n        version_alias (str, optional): User provided version alias so that a model\n            version can be referenced via alias instead of auto-generated version ID.\n            Defaults to None.\n\n    Returns:\n        str: Resource name of the exported model\n    \"\"\"\n    from google.api_core.exceptions import NotFound\n    from google.cloud.aiplatform import Model\n    from loguru import logger\n\n    # The URI expects a folder containing the model binaries\n    model_uri = model.uri.rsplit(\"/\", 1)[0]\n\n    # If a model with the same id exists, use it as the parent model\n    try:\n        result_model = Model(\n            model_name=model_id, project=project_id, location=project_location\n        )\n        parent_model = result_model.resource_name\n    except (NotFound, ValueError):\n        logger.info(\"Parent model not found.\")\n        parent_model = None\n\n    if version_alias is not None:\n        version_alias = [version_alias]\n\n    logger.debug(f\"Labels: {labels}\")\n    logger.info(\"Uploading model to model registry.\")\n    model = Model.upload(\n        model_id=model_id,\n        project=project_id,\n        location=project_location,\n        display_name=display_name,\n        parent_model=parent_model,\n        version_aliases=version_alias,\n        is_default_version=is_default_version,\n        serving_container_image_uri=serving_container_image_uri,\n        artifact_uri=model_uri,\n        description=description,\n        version_description=version_description,\n        labels=labels,\n        sync=True,\n    )\n    logger.info(f\"Uploaded model {model}.\")\n    return model.resource_name\n\n"
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef upload_model(\n    model_id: str,\n    display_name: str,\n    serving_container_image_uri: str,\n    project_id: str,\n    project_location: str,\n    model: Input[Model],\n    labels: dict,\n    description: str,\n    is_default_version: bool,\n    version_description: str,\n    version_alias: list = [],\n    model_name: str = None,\n) -> str:\n    \"\"\"Upload a model from GCS to the Vertex AI model registry.\n\n    Args:\n        model_id (str): The ID (name) of the model.\n        display_name (str): The display name of the model. The name\n        serving_container_image_uri (str): The URI of the model serving container.\n            Must come from the GCP Container Registry or Artifact Registry.\n        project_id (str): GCP Project ID where the model will be saved.\n        project_location (str): Location where the model will be saved.\n        model (Input[Model]): Model to be uploaded.\n        labels (dict): Labels with user-defined metadata to organise the model.\n        description (str): Description of the model.\n        is_default_version (bool): When set to True, the newly uploaded model version\n            will automatically have alias \"default\" included. When set to False, the\n            \"default\" alias will not be moved\n        version_description (str): Description of the version of the model being\n            uploaded.\n        version_alias (str, optional): User provided version alias so that a model\n            version can be referenced via alias instead of auto-generated version ID.\n            Defaults to None.\n        model_name (str, optional): \n\n    Returns:\n        str: Resource name of the exported model\n    \"\"\"\n    from google.api_core.exceptions import NotFound\n    from google.cloud.aiplatform import Model\n    from loguru import logger\n\n    # The URI expects a folder containing the model binaries\n    model_uri = model.uri.rsplit(\"/\", 1)[0]\n\n    # If a model with the same id exists, use it as the parent model\n    try:\n        result_model = Model(\n            model_name=model_id, project=project_id, location=project_location\n        )\n        parent_model = result_model.resource_name\n    except (NotFound, ValueError):\n        logger.info(\"Parent model not found.\")\n        parent_model = None\n\n    if \"data_version\" in labels:\n        labels[\"data_version\"] = labels[\"data_version\"].replace(\"T\", \"\")\n    if model_name is not None:\n        version_alias.append(\n            f\"{model_name.replace('_', '-')}-{labels.get('timestamp', 'no-timestamp')}\"\n        )\n    if version_alias == []:\n        version_alias = None\n\n    logger.debug(f\"Version aliases: {version_alias}\")\n    logger.debug(f\"Labels: {labels}\")\n    logger.info(\"Uploading model to model registry.\")\n    model = Model.upload(\n        model_id=model_id,\n        project=project_id,\n        location=project_location,\n        display_name=display_name,\n        parent_model=parent_model,\n        version_aliases=version_alias,\n        is_default_version=is_default_version,\n        serving_container_image_uri=serving_container_image_uri,\n        artifact_uri=model_uri,\n        description=description,\n        version_description=version_description,\n        labels=labels,\n        sync=True,\n    )\n    logger.info(f\"Uploaded model {model}.\")\n    return model.resource_name\n\n"
             ],
             "image": "python:3.9"
           }
@@ -1663,7 +1692,7 @@
       }
     },
     "pipelineInfo": {
-      "name": "frauds-training-pipeline-master-57dfe73"
+      "name": "frauds-training-pipeline-master-64c23ac"
     },
     "root": {
       "dag": {
@@ -1817,7 +1846,7 @@
         "stringValue": "[\"roberto.fierimonte.spam@gmail.com\"]"
       },
       "models": {
-        "stringValue": "[\"sgd_classifier\"]"
+        "stringValue": "[\"logistic_regression\", \"sgd_classifier\", \"random_forest\", \"xgboost\", \"lightgbm\"]"
       }
     }
   }

@@ -29,12 +29,14 @@ inputs:
     Description of the version of the model being
     uploaded.
 - name: version_alias
-  type: String
+  type: JsonArray
   description: |-
     User provided version alias so that a model
     version can be referenced via alias instead of auto-generated version ID.
     Defaults to None.
+  default: '[]'
   optional: true
+- {name: model_name, type: String, description: '', optional: true}
 outputs:
 - {name: Output, type: String}
 implementation:
@@ -56,90 +58,51 @@ implementation:
       program_path=$(mktemp -d)
       printf "%s" "$0" > "$program_path/ephemeral_component.py"
       python3 -m kfp.v2.components.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
-    - |2+
-
-      import kfp
-      from kfp.v2 import dsl
-      from kfp.v2.dsl import *
-      from typing import *
-
-      def upload_model(
-          model_id: str,
-          display_name: str,
-          serving_container_image_uri: str,
-          project_id: str,
-          project_location: str,
-          model: Input[Model],
-          labels: dict,
-          description: str,
-          is_default_version: bool,
-          version_description: str,
-          version_alias: str = None,
-      ) -> str:
-          """Upload a model from GCS to the Vertex AI model registry.
-
-          Args:
-              model_id (str): The ID (name) of the model.
-              display_name (str): The display name of the model. The name
-              serving_container_image_uri (str): The URI of the model serving container.
-                  Must come from the GCP Container Registry or Artifact Registry.
-              project_id (str): GCP Project ID where the model will be saved.
-              project_location (str): Location where the model will be saved.
-              model (Input[Model]): Model to be uploaded.
-              labels (dict): Labels with user-defined metadata to organise the model.
-              description (str): Description of the model.
-              is_default_version (bool): When set to True, the newly uploaded model version
-                  will automatically have alias "default" included. When set to False, the
-                  "default" alias will not be moved
-              version_description (str): Description of the version of the model being
-                  uploaded.
-              version_alias (str, optional): User provided version alias so that a model
-                  version can be referenced via alias instead of auto-generated version ID.
-                  Defaults to None.
-
-          Returns:
-              str: Resource name of the exported model
-          """
-          from google.api_core.exceptions import NotFound
-          from google.cloud.aiplatform import Model
-          from loguru import logger
-
-          # The URI expects a folder containing the model binaries
-          model_uri = model.uri.rsplit("/", 1)[0]
-
-          # If a model with the same id exists, use it as the parent model
-          try:
-              result_model = Model(
-                  model_name=model_id, project=project_id, location=project_location
-              )
-              parent_model = result_model.resource_name
-          except (NotFound, ValueError):
-              logger.info("Parent model not found.")
-              parent_model = None
-
-          if version_alias is not None:
-              version_alias = [version_alias]
-
-          logger.debug(f"Labels: {labels}")
-          logger.info("Uploading model to model registry.")
-          model = Model.upload(
-              model_id=model_id,
-              project=project_id,
-              location=project_location,
-              display_name=display_name,
-              parent_model=parent_model,
-              version_aliases=version_alias,
-              is_default_version=is_default_version,
-              serving_container_image_uri=serving_container_image_uri,
-              artifact_uri=model_uri,
-              description=description,
-              version_description=version_description,
-              labels=labels,
-              sync=True,
-          )
-          logger.info(f"Uploaded model {model}.")
-          return model.resource_name
-
+    - "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing\
+      \ import *\n\ndef upload_model(\n    model_id: str,\n    display_name: str,\n\
+      \    serving_container_image_uri: str,\n    project_id: str,\n    project_location:\
+      \ str,\n    model: Input[Model],\n    labels: dict,\n    description: str,\n\
+      \    is_default_version: bool,\n    version_description: str,\n    version_alias:\
+      \ list = [],\n    model_name: str = None,\n) -> str:\n    \"\"\"Upload a model\
+      \ from GCS to the Vertex AI model registry.\n\n    Args:\n        model_id (str):\
+      \ The ID (name) of the model.\n        display_name (str): The display name\
+      \ of the model. The name\n        serving_container_image_uri (str): The URI\
+      \ of the model serving container.\n            Must come from the GCP Container\
+      \ Registry or Artifact Registry.\n        project_id (str): GCP Project ID where\
+      \ the model will be saved.\n        project_location (str): Location where the\
+      \ model will be saved.\n        model (Input[Model]): Model to be uploaded.\n\
+      \        labels (dict): Labels with user-defined metadata to organise the model.\n\
+      \        description (str): Description of the model.\n        is_default_version\
+      \ (bool): When set to True, the newly uploaded model version\n            will\
+      \ automatically have alias \"default\" included. When set to False, the\n  \
+      \          \"default\" alias will not be moved\n        version_description\
+      \ (str): Description of the version of the model being\n            uploaded.\n\
+      \        version_alias (str, optional): User provided version alias so that\
+      \ a model\n            version can be referenced via alias instead of auto-generated\
+      \ version ID.\n            Defaults to None.\n        model_name (str, optional):\
+      \ \n\n    Returns:\n        str: Resource name of the exported model\n    \"\
+      \"\"\n    from google.api_core.exceptions import NotFound\n    from google.cloud.aiplatform\
+      \ import Model\n    from loguru import logger\n\n    # The URI expects a folder\
+      \ containing the model binaries\n    model_uri = model.uri.rsplit(\"/\", 1)[0]\n\
+      \n    # If a model with the same id exists, use it as the parent model\n   \
+      \ try:\n        result_model = Model(\n            model_name=model_id, project=project_id,\
+      \ location=project_location\n        )\n        parent_model = result_model.resource_name\n\
+      \    except (NotFound, ValueError):\n        logger.info(\"Parent model not\
+      \ found.\")\n        parent_model = None\n\n    if \"data_version\" in labels:\n\
+      \        labels[\"data_version\"] = labels[\"data_version\"].replace(\"T\",\
+      \ \"\")\n    if model_name is not None:\n        version_alias.append(\n   \
+      \         f\"{model_name.replace('_', '-')}-{labels.get('timestamp', 'no-timestamp')}\"\
+      \n        )\n    if version_alias == []:\n        version_alias = None\n\n \
+      \   logger.debug(f\"Version aliases: {version_alias}\")\n    logger.debug(f\"\
+      Labels: {labels}\")\n    logger.info(\"Uploading model to model registry.\"\
+      )\n    model = Model.upload(\n        model_id=model_id,\n        project=project_id,\n\
+      \        location=project_location,\n        display_name=display_name,\n  \
+      \      parent_model=parent_model,\n        version_aliases=version_alias,\n\
+      \        is_default_version=is_default_version,\n        serving_container_image_uri=serving_container_image_uri,\n\
+      \        artifact_uri=model_uri,\n        description=description,\n       \
+      \ version_description=version_description,\n        labels=labels,\n       \
+      \ sync=True,\n    )\n    logger.info(f\"Uploaded model {model}.\")\n    return\
+      \ model.resource_name\n\n"
     args:
     - --executor_input
     - {executorInput: null}
