@@ -1,6 +1,4 @@
-from pathlib import Path
-
-from kfp.v2.dsl import Model, Output, component
+from kfp.dsl import Model, Output, component
 
 from src.components.dependencies import GOOGLE_CLOUD_AIPLATFORM, LOGURU, PYTHON
 
@@ -8,7 +6,6 @@ from src.components.dependencies import GOOGLE_CLOUD_AIPLATFORM, LOGURU, PYTHON
 @component(
     base_image=PYTHON,
     packages_to_install=[GOOGLE_CLOUD_AIPLATFORM, LOGURU],
-    output_component_file=str(Path(__file__).with_suffix(".yaml")),
 )
 def lookup_model(
     model_name: str,

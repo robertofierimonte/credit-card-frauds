@@ -1,0 +1,11 @@
+{
+    "attributes": {
+        "enable_caching": "True",
+        "template_path": "training.json"
+    },
+    "data": {
+        "dataset_id": "credit_card_frauds",
+        "dataset_location": "europe-west2",
+        "data_version": "20230614T145952"
+    }
+}

@@ -3,20 +3,14 @@ import base64
 import json
 import os
 import re
-import warnings
 from distutils.util import strtobool
 from typing import List, Optional
 
 from google.cloud import aiplatform
-from kfp.v2.google.client import AIPlatformClient
 from loguru import logger
 
-from src.trigger.utils import wait_pipeline_until_complete
 
-warnings.filterwarnings("ignore", category=FutureWarning)
-
-
-def cf_handler(event: dict, context) -> Optional[aiplatform.PipelineJob]:
+def cf_handler(event: dict, context) -> aiplatform.PipelineJob:
     """Handle the Pub/Sub event and make a call to trigger the KFP pipeline.
 
     Args:
@@ -28,7 +22,7 @@ def cf_handler(event: dict, context) -> Optional[aiplatform.PipelineJob]:
         context: Metadata of the triggering event.
 
     Returns:
-        Optional[aiplatform.PipelineJob]: Pipeline job that is triggered as result
+        aiplatform.PipelineJob: Pipeline job that is triggered as result
     """
     event["data"] = base64.b64decode(event["data"]).decode("utf-8")
     event["data"] = json.loads(event["data"])
@@ -36,18 +30,14 @@ def cf_handler(event: dict, context) -> Optional[aiplatform.PipelineJob]:
     return trigger_pipeline_from_payload(event)
 
 
-def trigger_pipeline_from_payload(
-    payload: dict, use_fallback: bool = True
-) -> Optional[aiplatform.PipelineJob]:
+def trigger_pipeline_from_payload(payload: dict) -> aiplatform.PipelineJob:
     """Triggers a pipeline from a payload, a pipeline definition, and env variables.
 
     Args:
         payload (dict): Payload containing attributes and data for the pipeline.
-        use_fallback (bool, optional): If True, use KFP's AIPlatform client rather
-            than Google's one. Defaults to True.
 
     Returns:
-        Optional[aiplatform.PipelineJob]: Pipeline job that is triggered as result
+        aiplatform.PipelineJob: Pipeline job that is triggered as result
     """
     payload = convert_payload(payload)
     logger.debug(f"enable_caching: {payload['attributes']['enable_caching']}.")
@@ -63,7 +53,6 @@ def trigger_pipeline_from_payload(
         service_account=env["service_account"],
         enable_caching=payload["attributes"]["enable_caching"],
         mode=env["mode"],
-        use_fallback=use_fallback,
     )
 
 
@@ -76,8 +65,7 @@ def trigger_pipeline(
     service_account: str,
     enable_caching: Optional[bool] = None,
     mode: Optional[str] = None,
-    use_fallback: bool = True,
-) -> Optional[aiplatform.PipelineJob]:
+) -> aiplatform.PipelineJob:
     """Trigger the Vertex pipeline run.
 
     Args:
@@ -96,51 +84,28 @@ def trigger_pipeline(
             (enable caching, except where disabled at a component level).
         mode (Optional[str], optional): If `mode` = "run", monitor the job results
             until completion, otherwise just submit the job. Defaults to None.
-        use_fallback (bool, optional): _description_If True, use KFP's AIPlatform
-            client rather than Google's one. Defaults to True.
 
     Returns:
-        Optional[aiplatform.PipelineJob]: Pipeline job that is triggered as result
+        aiplatform.PipelineJob: Pipeline job that is triggered as result
     """
-    if use_fallback:
-        # Initialise API client
-        api_client = AIPlatformClient(project_id=project_id, region=location)
+    # Initialise API client
+    aiplatform.init(project=project_id, location=location)
 
-        # Execute pipeline in Vertex
-        pipeline_info = api_client.create_run_from_job_spec(
-            job_spec_path=template_path,
-            service_account=service_account,
-            pipeline_root=pipeline_root,
-            parameter_values=parameter_values,
-            enable_caching=enable_caching,
-        )
-        job_id = pipeline_info["displayName"]
-        logger.info(f"Job ID: {job_id}.")
+    # Instantiate PipelineJob object
+    pipeline_job = aiplatform.pipeline_jobs.PipelineJob(
+        display_name="pipeline-execution",
+        template_path=template_path,
+        pipeline_root=pipeline_root,
+        parameter_values=parameter_values,
+        enable_caching=enable_caching,
+    )
 
-        # Optionally wait until completion
-        if mode == "run":
-            wait_pipeline_until_complete(job_id=job_id)
-        return None
-
+    # Execute pipeline in Vertex and optionally wait until completion
+    if mode == "run":
+        pipeline_job.run(service_account=service_account)
     else:
-        # Initialise API client
-        aiplatform.init(project=project_id, location=location)
-
-        # Instantiate PipelineJob object
-        pipeline_job = aiplatform.pipeline_jobs.PipelineJob(
-            display_name="pipeline-execution",
-            template_path=template_path,
-            pipeline_root=pipeline_root,
-            parameter_values=parameter_values,
-            enable_caching=enable_caching,
-        )
-
-        # Execute pipeline in Vertex and optionally wait until completion
-        if mode == "run":
-            pipeline_job.run(service_account=service_account)
-        else:
-            pipeline_job.submit(service_account=service_account)
-        return pipeline_job
+        pipeline_job.submit(service_account=service_account)
+    return pipeline_job
 
 
 def convert_payload(payload: dict) -> dict:
@@ -180,11 +145,6 @@ def convert_payload(payload: dict) -> dict:
     if env_value is not None and "project_location" not in payload["data"]:
         payload["data"]["project_location"] = env_value
 
-    # if PIPELINE_FILES_GCS_PATH is set, overwrite the one in payload
-    env_value = os.environ.get("PIPELINE_FILES_GCS_PATH")
-    if env_value is not None:
-        payload["data"]["pipeline_files_gcs_path"] = env_value
-
     # if TEMPLATE_BASE_PATH is set, overwrite the one in payload
     env_value = os.environ.get("TEMPLATE_BASE_PATH")
     if env_value is not None:
@@ -193,8 +153,13 @@ def convert_payload(payload: dict) -> dict:
 
     # if MODEL_FILE_PATH is set, overwrite the one in payload
     env_value = os.environ.get("MODEL_FILE_PATH")
-    if env_value and "model_file" in payload["data"]:
-        payload["data"]["template_path"] = env_value
+    if env_value is not None and "model_file" in payload["data"]:
+        payload["data"]["model_file"] = env_value
+
+    # add MONITORING_EMAIL_ADDRESS to payload
+    env_value = os.environ.get("MONITORING_EMAIL_ADDRESS", "")
+    env_value = re.sub(r"\s", "", env_value)
+    payload["data"]["email_notification_recipients"] = env_value.split(",")
 
     return payload
 
@@ -279,7 +244,7 @@ def sandbox_run() -> Optional[aiplatform.PipelineJob]:
                 "Argument `enable-caching` is in the wrong format. It will be ignored."
             )
 
-    return trigger_pipeline_from_payload(payload, use_fallback=True)
+    return trigger_pipeline_from_payload(payload)
 
 
 if __name__ == "__main__":

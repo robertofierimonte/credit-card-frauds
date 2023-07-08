@@ -1,6 +1,4 @@
-from pathlib import Path
-
-from kfp.v2.dsl import Artifact, Input, component
+from kfp.dsl import Artifact, Input, component
 
 from src.components.dependencies import GOOGLE_CLOUD_BIGQUERY, LOGURU, PYTHON
 
@@ -8,7 +6,6 @@ from src.components.dependencies import GOOGLE_CLOUD_BIGQUERY, LOGURU, PYTHON
 @component(
     base_image=PYTHON,
     packages_to_install=[GOOGLE_CLOUD_BIGQUERY, LOGURU],
-    output_component_file=str(Path(__file__).with_suffix(".yaml")),
 )
 def dataset_to_bq_table(
     bq_client_project_id: str,

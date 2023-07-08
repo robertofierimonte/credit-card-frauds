@@ -1,6 +1,4 @@
-from pathlib import Path
-
-from kfp.v2.dsl import Artifact, Dataset, Input, Metrics, Model, Output, component
+from kfp.dsl import Artifact, Dataset, Input, Metrics, Model, Output, component
 
 from src.components.dependencies import (
     GOOGLE_CLOUD_STORAGE,
@@ -12,7 +10,6 @@ from src.components.dependencies import (
 @component(
     base_image=PIPELINE_IMAGE_NAME,
     packages_to_install=[GOOGLE_CLOUD_STORAGE, MATPLOTLIB],
-    output_component_file=str(Path(__file__).with_suffix(".yaml")),
 )
 def train_evaluate_model(
     training_data: Input[Dataset],
@@ -49,7 +46,6 @@ def train_evaluate_model(
             will be passed automatically by the orchestrator. The .path
             attribute is the location of the joblib file in GCS.
     """
-    import os
     from pathlib import Path
 
     import joblib
@@ -126,12 +122,13 @@ def train_evaluate_model(
     logger.debug(f"Classifier: {classifier}.")
 
     if model_gcs_folder_path is not None:
+        model_gcs_folder_path = model_gcs_folder_path.replace("gs://", "/gcs/")
         model.path = model_gcs_folder_path
         valid_pr_curve.path = model_gcs_folder_path
 
-    model.path = model.path + f"/{model_name}"
+    model.path = f"{model.path}/{model_name}"
     model_dir = Path(model.path).parent.absolute()
-    os.makedirs(model_dir, exist_ok=True)
+    model_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info(f"Saving model to {model.path}.")
     joblib.dump(classifier, model.path)

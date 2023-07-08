@@ -1,24 +1,28 @@
-import json
 import os
 import warnings
 from pathlib import Path
 
-from google_cloud_pipeline_components.experimental.custom_job.utils import (
+from google_cloud_pipeline_components.v1.custom_job.utils import (
     create_custom_training_job_op_from_component,
 )
-from google_cloud_pipeline_components.experimental.vertex_notification_email import (
+from google_cloud_pipeline_components.v1.vertex_notification_email import (
     VertexNotificationEmailOp,
 )
-from kfp.dsl.types import InconsistentTypeWarning
-from kfp.v2 import compiler, dsl
+from kfp import compiler, dsl
+from kfp.components.types.type_utils import InconsistentTypeWarning
 
 from src.base.utilities import generate_query, read_json
-from src.components.aiplatform import upload_model
+from src.components.aiplatform import lookup_model, upload_model
 from src.components.bigquery import bq_table_to_dataset, execute_query
 from src.components.data import get_data_version
 from src.components.dependencies import PIPELINE_IMAGE_NAME
 from src.components.helpers import get_current_time
-from src.components.model import evaluate_model, train_evaluate_model
+from src.components.model import (
+    compare_champion_challenger,
+    compare_models,
+    evaluate_model,
+    train_evaluate_model,
+)
 from src.components.monitoring import generate_training_stats_schema
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -27,7 +31,21 @@ warnings.filterwarnings("ignore", category=InconsistentTypeWarning, append=True)
 PIPELINE_TAG = os.getenv("PIPELINE_TAG", "untagged")
 BRANCH_NAME = os.getenv("CURRENT_BRANCH", "no_branch")
 COMMIT_HASH = os.getenv("CURRENT_COMMIT", "no_commit")
+PIPELINE_FILES_GCS_PATH = os.getenv("PIPELINE_FILES_GCS_PATH")
 PIPELINE_NAME = f"frauds-training-pipeline-{BRANCH_NAME}-{COMMIT_HASH}"
+
+
+train_job = create_custom_training_job_op_from_component(
+    component_spec=train_evaluate_model,
+    machine_type="n1-standard-32",
+    replica_count=1,
+)
+
+training_stats_schema_job = create_custom_training_job_op_from_component(
+    component_spec=generate_training_stats_schema,
+    machine_type="n1-standard-16",
+    replica_count=1,
+)
 
 
 @dsl.pipeline(name=PIPELINE_NAME, description="Credit card frauds training Pipeline")
@@ -37,17 +55,7 @@ def training_pipeline(
     dataset_id: str,
     dataset_location: str,
     data_version: str,
-    pipeline_files_gcs_path: str,
-    models: list = [
-        "logistic_regression",
-        "sgd_classifier",
-        "random_forest",
-        "xgboost",
-        "lightgbm",
-    ],
-    email_notification_recipients: list = [
-        "roberto.fierimonte.spam@gmail.com",
-    ],
+    email_notification_recipients: list,
 ):
     """Credit card frauds classification training pipeline.
 
@@ -65,6 +73,8 @@ def training_pipeline(
         pipeline_files_gcs_path (str): GCS path where the pipeline files are located.
         data_version (str): Optional. Empty or a specific timestamp in
             `%Y%m%dT%H%M%S format.
+        email_notification_recipients (list): List of email addresses that will be
+            notified upon completion (whether successful or not) of the pipeline.
     """
     notify_email_task = VertexNotificationEmailOp(
         recipients=email_notification_recipients
@@ -74,13 +84,7 @@ def training_pipeline(
     config_folder = Path(__file__).parent.parent / "configuration"
     config_params = read_json(config_folder / "params.json")
 
-    models_gcs_folder_path = str(
-        Path(f"{pipeline_files_gcs_path}") / "models" / BRANCH_NAME / COMMIT_HASH
-    )
-    artifacts_gcs_folder_path = str(
-        Path(f"{pipeline_files_gcs_path}") / "artifacts" / BRANCH_NAME / COMMIT_HASH
-    )
-
+    models = config_params["models"]
     features = "`" + "`,\n`".join(f for f in config_params["features"]) + "`"
 
     with dsl.ExitHandler(notify_email_task, name="Notify pipeline result"):
@@ -114,6 +118,13 @@ def training_pipeline(
         valid_set_table = f"{dataset_name}.validation"
         test_set_table = f"{dataset_name}.testing"
 
+        models_gcs_folder_path = (
+            f"{PIPELINE_FILES_GCS_PATH}/models/{BRANCH_NAME}/{COMMIT_HASH}"
+        )
+        artifacts_gcs_folder_path = (
+            f"{PIPELINE_FILES_GCS_PATH}/artifacts/{BRANCH_NAME}/{COMMIT_HASH}"
+        )
+
         preprocessing_query = generate_query(
             queries_folder / "q_preprocessing.sql",
             transactions_table=transactions_table,
@@ -125,7 +136,7 @@ def training_pipeline(
             features=features,
         )
 
-        query_job_config = json.dumps(dict(use_query_cache=True))
+        query_job_config = dict(use_query_cache=True)
 
         preprocess_data = (
             execute_query(
@@ -149,7 +160,7 @@ def training_pipeline(
 
         train_valid_test = (
             execute_query(
-                train_valid_test_query,
+                query=train_valid_test_query,
                 bq_client_project_id=project_id,
                 query_job_config=query_job_config,
             )
@@ -166,7 +177,7 @@ def training_pipeline(
                 table_name=train_set_table.rsplit(".", 1)[1],
                 dataset_location=dataset_location,
                 file_pattern="file_*",
-                extract_job_config=json.dumps(dict(destination_format="PARQUET")),
+                extract_job_config=dict(destination_format="PARQUET"),
             )
             .after(train_valid_test)
             .set_display_name("Extract training data")
@@ -181,7 +192,7 @@ def training_pipeline(
                 table_name=valid_set_table.rsplit(".", 1)[1],
                 dataset_location=dataset_location,
                 file_pattern="file_*",
-                extract_job_config=json.dumps(dict(destination_format="PARQUET")),
+                extract_job_config=dict(destination_format="PARQUET"),
             )
             .after(train_valid_test)
             .set_display_name("Extract validation data")
@@ -196,17 +207,11 @@ def training_pipeline(
                 table_name=test_set_table.rsplit(".", 1)[1],
                 dataset_location=dataset_location,
                 file_pattern="file_*",
-                extract_job_config=json.dumps(dict(destination_format="PARQUET")),
+                extract_job_config=dict(destination_format="PARQUET"),
             )
             .after(train_valid_test)
             .set_display_name("Extract test data")
             .set_caching_options(True)
-        )
-
-        training_stats_schema_job = create_custom_training_job_op_from_component(
-            component_spec=generate_training_stats_schema,
-            machine_type="n1-standard-16",
-            replica_count=1,
         )
 
         training_stats_schema = (
@@ -223,21 +228,28 @@ def training_pipeline(
             .set_caching_options(True)
         )
 
-        train_job = create_custom_training_job_op_from_component(
-            component_spec=train_evaluate_model,
-            machine_type="n1-standard-32",
-            replica_count=1,
+        lookup_champion_model = (
+            lookup_model(
+                model_name="credit-card-frauds",
+                project_id=project_id,
+                project_location=project_location,
+                model_label="champion",
+            )
+            .set_display_name("Lookup champion model")
+            .set_caching_options(True)
         )
 
-        with dsl.ParallelFor(loop_args=models, parallelism=2) as item:
+        with dsl.ParallelFor(
+            items=models, parallelism=2, name="Train and evaluate models"
+        ) as item:
             train = (
                 train_job(
                     training_data=extract_training_data.outputs["dataset"],
                     validation_data=extract_validation_data.outputs["dataset"],
                     target_column=config_params["target_column"],
                     model_name=item,
-                    models_params=json.dumps(config_params["models_params"]),
-                    fit_args=json.dumps(config_params["fit_args"]),
+                    models_params=config_params["models_params"],
+                    fit_args=config_params["fit_args"],
                     data_processing_args=config_params["data_processing_args"],
                     model_gcs_folder_path=models_gcs_folder_path,
                     # Training wrapper specific arguments
@@ -245,7 +257,7 @@ def training_pipeline(
                     location=project_location,
                 )
                 .after(extract_training_data, extract_validation_data)
-                .set_display_name("Train and evaluate models")
+                .set_display_name("Train and evaluate model")
                 .set_caching_options(True)
             )
 
@@ -256,7 +268,7 @@ def training_pipeline(
                     model=train.outputs["model"],
                 )
                 .after(train)
-                .set_display_name("Predict and evaluate models")
+                .set_display_name("Evaluate model on test set")
                 .set_caching_options(True)
             )
 
@@ -268,14 +280,12 @@ def training_pipeline(
                     project_id=project_id,
                     project_location=project_location,
                     model=train.outputs["model"],
-                    labels=json.dumps(
-                        dict(
-                            timestamp=f"{current_timestamp.output}",
-                            pipeline_tag=PIPELINE_TAG,
-                            branch_name=BRANCH_NAME,
-                            commit_hash=COMMIT_HASH,
-                            data_version=f"{data_version.output}",
-                        )
+                    pipeline_timestamp=f"{current_timestamp.output}",
+                    data_version=f"{data_version.output}",
+                    labels=dict(
+                        pipeline_tag=PIPELINE_TAG,
+                        branch_name=BRANCH_NAME,
+                        commit_hash=COMMIT_HASH,
                     ),
                     description="Credit card frauds model",
                     is_default_version=False,
@@ -284,6 +294,35 @@ def training_pipeline(
                 )
                 .after(train)
                 .set_display_name("Upload model")
+            )
+
+        compare_candidates = (
+            compare_models(
+                test_data=extract_test_data.outputs["dataset"],
+                target_column=config_params["target_column"],
+                metric_to_optimise="Average Precision",
+                higher_is_better=True,
+                models=dsl.Collected(train.outputs["model"]),
+            )
+            .set_display_name("Select best model")
+            .set_caching_options(True)
+        )
+
+        with dsl.Condition(
+            lookup_champion_model.outputs["Output"] != "", "Champion model exists"
+        ):
+            challenge_champion_model = (
+                compare_champion_challenger(
+                    test_data=extract_test_data.outputs["dataset"],
+                    target_column=config_params["target_column"],
+                    challenger_model=compare_candidates.outputs["best_model"],
+                    champion_model=lookup_champion_model.outputs["model"],
+                    metric_to_optimise="Average Precision",
+                    absolute_threshold=0.1,
+                    higher_is_better=True,
+                )
+                .set_display_name("Compare challenger to champion")
+                .set_caching_options(True)
             )
 
 

@@ -1,6 +1,4 @@
-from pathlib import Path
-
-from kfp.v2.dsl import Dataset, Input, Model, Output, component
+from kfp.dsl import Dataset, Input, Model, Output, component
 
 from src.components.dependencies import JOBLIB, PANDAS, PYTHON, SCIKIT_LEARN
 
@@ -8,7 +6,6 @@ from src.components.dependencies import JOBLIB, PANDAS, PYTHON, SCIKIT_LEARN
 @component(
     base_image=PYTHON,
     packages_to_install=[SCIKIT_LEARN, PANDAS, JOBLIB],
-    output_component_file=str(Path(__file__).with_suffix(".yaml")),
 )
 def predict_model(
     input_data: Input[Dataset],

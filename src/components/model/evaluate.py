@@ -1,13 +1,10 @@
-from pathlib import Path
-
-from kfp.v2.dsl import Dataset, Input, Metrics, Model, Output, component
+from kfp.dsl import Dataset, Input, Metrics, Model, Output, component
 
 from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
 @component(
     base_image=PIPELINE_IMAGE_NAME,
-    output_component_file=str(Path(__file__).with_suffix(".yaml")),
 )
 def evaluate_model(
     test_data: Input[Dataset],

@@ -7,6 +7,7 @@ set-current-env-vars:
 -include .env
 enable-caching ?= ""
 data-version ?= ""
+environment ?= dev
 export
 
 help: ## Display this help screen
@@ -28,7 +29,7 @@ setup: ## Install all the required Python dependencies, download the data, and c
 		$(MAKE) download-data && \
 		poetry run python -m ipykernel install --user --name="credit-card-frauds-venv"
 
-upload-data: ## Upload the data from the local folder to Azure and create a data asset. Optionally specify data-version={data_version}
+upload-data: ## Upload the data from the local folder to Bigquery and create a schema where to save the table. Optionally specify data-version={data_version}
 	@poetry run python -m scripts.upload_data --data-version ${data-version}
 
 build-image: ## Build the Docker image locally.
@@ -43,6 +44,6 @@ push-image: ## Push the Docker image to the container registry. Must specify ima
 compile: ## Compile the pipeline. Must specify pipeline=<training|prediction>
 	@poetry run python -m src.pipelines.${pipeline}.pipeline
 
-run: ## Run the pipeline. Must specify pipeline=<training|prediction>. Optionally specify enable-caching=<true|false> and data-version={data_version}
+run: ## Run the pipeline. Must specify pipeline=<training|prediction>. Optionally specify environment=<dev|prod>, enable-caching=<true|false>, and data-version={data_version}
 	@$(MAKE) compile && \
-		poetry run python -m src.trigger.main --payload=./src/pipelines/${pipeline}/payloads/${pipeline}.json --enable-caching=${enable-caching} --data-version=${data-version}
+		poetry run python -m src.trigger.main --payload=./src/pipelines/${pipeline}/payloads/${environment}.json --enable-caching=${enable-caching} --data-version=${data-version}

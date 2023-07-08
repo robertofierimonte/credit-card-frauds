@@ -1,7 +1,6 @@
-from pathlib import Path
 from typing import Optional
 
-from kfp.v2.dsl import Artifact, Input, Output, component
+from kfp.dsl import Artifact, Input, Output, component
 
 from src.components.dependencies import LOGURU, PYTHON
 
@@ -9,7 +8,6 @@ from src.components.dependencies import LOGURU, PYTHON
 @component(
     base_image=PYTHON,
     packages_to_install=[LOGURU],
-    output_component_file=str(Path(__file__).with_suffix(".yaml")),
 )
 def copy_artifact(
     source_artifact: Input[Artifact],

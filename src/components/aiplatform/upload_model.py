@@ -1,6 +1,4 @@
-from pathlib import Path
-
-from kfp.v2.dsl import Input, Model, component
+from kfp.dsl import Input, Model, component
 
 from src.components.dependencies import GOOGLE_CLOUD_AIPLATFORM, LOGURU, PYTHON
 
@@ -8,7 +6,6 @@ from src.components.dependencies import GOOGLE_CLOUD_AIPLATFORM, LOGURU, PYTHON
 @component(
     base_image=PYTHON,
     packages_to_install=[GOOGLE_CLOUD_AIPLATFORM, LOGURU],
-    output_component_file=str(Path(__file__).with_suffix(".yaml")),
 )
 def upload_model(
     model_id: str,
@@ -17,6 +14,8 @@ def upload_model(
     project_id: str,
     project_location: str,
     model: Input[Model],
+    pipeline_timestamp: str,
+    data_version: str,
     labels: dict,
     description: str,
     is_default_version: bool,
@@ -66,8 +65,9 @@ def upload_model(
         logger.info("Parent model not found.")
         parent_model = None
 
-    if "data_version" in labels:
-        labels["data_version"] = labels["data_version"].replace("T", "")
+    labels["data_version"] = data_version.replace("T", "")
+    labels["pipeline_timestamp"] = pipeline_timestamp.replace("T", "")
+
     if model_name is not None:
         version_alias.append(
             f"{model_name.replace('_', '-')}-{labels.get('timestamp', 'no-timestamp')}"

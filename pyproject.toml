@@ -1,3 +1,13 @@
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "v$major.$minor.$patch"
+update_changelog_on_bump = true
+version_files = [
+    "pyproject.toml:version",
+    "src/__version__.py"
+]
+
 [tool.poetry]
 name = "credit-card-frauds"
 version = "0.1.0"
@@ -21,8 +31,8 @@ Jinja2 = ">3"
 holidays = "^0.25"
 loguru = "^0.7.0"
 lightgbm = "^3.3.5"
-kfp = "^1.8.22"
-google-cloud-pipeline-components = "^1.0.43"
+kfp = "^2.0.0"
+google-cloud-pipeline-components = "^2.0.0"
 google-cloud-aiplatform = "^1.25.0"
 google-cloud-storage = "^2.9.0"
 google-cloud-bigquery = {version = "^3.10.0", extras = ["pandas"]}
@@ -64,6 +74,10 @@ pre-commit = "^2.20.0"
 loguru = "^0.7.0"
 gitpython = "^3.1.31"
 python-dotenv = "^1.0.0"
+Jinja2 = ">3"
+kfp = "^2.0.0"
+google-cloud-pipeline-components = "^2.0.0"
+google-cloud-aiplatform = "^1.25.0"
 
 [build-system]
 requires = ["poetry-core"]
