@@ -41,12 +41,14 @@ pipelines:
                 - gcloud auth configure-docker europe-west2-docker.pkg.dev --verbosity error
                 - >-
                   docker build
+                  --build-arg BUILDKIT_INLINE_CACHE=1
+                  --cache-from ${IMAGE_NAME}:latest
                   --tag ${IMAGE_NAME}
                   --tag ${ARTIFACT_REGISTRY_REPO}/${BASE_IMAGE_NAME}:${BITBUCKET_COMMIT:0:7}
                   -f ./containers/base/Dockerfile
                   .
                 - docker push --all-tags ${ARTIFACT_REGISTRY_REPO}/${BASE_IMAGE_NAME}
-          - step: 
+          - step:
               name: Run training pipeline
               script:
                 - source .env

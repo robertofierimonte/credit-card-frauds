@@ -7,24 +7,24 @@ from src.components.dependencies import GOOGLE_CLOUD_AIPLATFORM, LOGURU, PYTHON
 def deploy_model(
     model_id: str,
     endpoint_id: str,
-    model_location: str,
+    project_location: str,
     project_id: str,
+    dataset_id: str,
     model_display_name: str = None,
     endpoint_display_name: str = None,
     model_label: str = None,
     monitoring: bool = True,
 ) -> None:
+    from google.api_core.exceptions import NotFound
     from google.cloud import aiplatform
-    from google.cloud.aiplatform import (
+    from google.cloud.aiplatform import (  # model_monitoring,
         Endpoint,
         Model,
         ModelDeploymentMonitoringJob,
-        model_monitoring,
     )
-    from google.cloud.core.exceptions import NotFound
     from loguru import logger
 
-    aiplatform.init(project=project_id, location=model_location)
+    aiplatform.init(project=project_id, location=project_location)
 
     if model_display_name is None:
         model_display_name = model_id
@@ -35,14 +35,12 @@ def deploy_model(
         model = Model(
             model_name=model_id,
             project=project_id,
-            location=model_location,
+            location=project_location,
+            version=model_label,
         )
-        logger.info(f"Found model {model_display_name}, version {model_label}.")
+        logger.info(f"Found model {model_id}, version {model_label}.")
     except NotFound:
-        msg = (
-            f"No model found with name {model_id} "
-            f"(project {project_id}, location {model_location})."
-        )
+        msg = f"No model found with name {model_id}, version {model_label}."
         logger.error(msg)
         raise RuntimeError(msg)
 
@@ -60,6 +58,10 @@ def deploy_model(
         endpoint = Endpoint.create(
             display_name=endpoint_display_name,
             enable_request_response_logging=True,
+            request_response_logging_sampling_rate=1.0,
+            request_response_logging_bq_destination_table=(
+                f"bq://{project_id}.{dataset_id}.endpoint_logging"
+            ),
         )
         logger.info(f"Created endpoint {endpoint_display_name}.")
 

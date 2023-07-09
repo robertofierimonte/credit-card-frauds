@@ -28,7 +28,7 @@ from src.components.monitoring import generate_training_stats_schema
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=InconsistentTypeWarning, append=True)
 
-PIPELINE_TAG = os.getenv("PIPELINE_TAG", "untagged")
+DEVELOPMENT_STAGE = os.getenv("DEVELOPMENT_STAGE", "no_development_stage")
 BRANCH_NAME = os.getenv("CURRENT_BRANCH", "no_branch")
 COMMIT_HASH = os.getenv("CURRENT_COMMIT", "no_commit")
 PIPELINE_FILES_GCS_PATH = os.getenv("PIPELINE_FILES_GCS_PATH")
@@ -230,10 +230,9 @@ def training_pipeline(
 
         lookup_champion_model = (
             lookup_model(
-                model_name="credit-card-frauds",
+                model_name="credit-card-frauds-champion",
                 project_id=project_id,
                 project_location=project_location,
-                model_label="champion",
             )
             .set_display_name("Lookup champion model")
             .set_caching_options(True)
@@ -283,7 +282,7 @@ def training_pipeline(
                     pipeline_timestamp=f"{current_timestamp.output}",
                     data_version=f"{data_version.output}",
                     labels=dict(
-                        pipeline_tag=PIPELINE_TAG,
+                        development_stage=DEVELOPMENT_STAGE,
                         branch_name=BRANCH_NAME,
                         commit_hash=COMMIT_HASH,
                     ),
@@ -322,6 +321,32 @@ def training_pipeline(
                     higher_is_better=True,
                 )
                 .set_display_name("Compare challenger to champion")
+                .set_caching_options(True)
+            )
+
+        with dsl.Condition(
+            lookup_champion_model.outputs["Output"] == "",
+            "Champion model does not exist",
+        ):
+            upload_challenger = (
+                upload_model(
+                    model_id="credit-card-frauds-challenger",
+                    display_name="credit-card-frauds-challenger",
+                    serving_container_image_uri=PIPELINE_IMAGE_NAME,
+                    project_id=project_id,
+                    project_location=project_location,
+                    model=compare_candidates.outputs["best_model"],
+                    pipeline_timestamp=f"{current_timestamp.output}",
+                    data_version=f"{data_version.output}",
+                    labels=dict(
+                        development_stage=DEVELOPMENT_STAGE,
+                        branch_name=BRANCH_NAME,
+                        commit_hash=COMMIT_HASH,
+                    ),
+                    description="Credit card frauds challenger model",
+                    is_default_version=True,
+                )
+                .set_display_name("Upload challenger model")
                 .set_caching_options(True)
             )
 

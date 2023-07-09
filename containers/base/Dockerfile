@@ -32,3 +32,5 @@ RUN poetry config virtualenvs.create false \
 
 # Copy the source code
 COPY src /opt/app/src
+
+ENTRYPOINT [ "python" ]

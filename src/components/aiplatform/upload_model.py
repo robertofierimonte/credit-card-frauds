@@ -14,13 +14,13 @@ def upload_model(
     project_id: str,
     project_location: str,
     model: Input[Model],
-    pipeline_timestamp: str,
-    data_version: str,
     labels: dict,
     description: str,
     is_default_version: bool,
-    version_description: str,
+    version_description: str = None,
     version_alias: list = [],
+    pipeline_timestamp: str = None,
+    data_version: str = None,
     model_name: str = None,
 ) -> str:
     """Upload a model from GCS to the Vertex AI model registry.
@@ -37,12 +37,14 @@ def upload_model(
         description (str): Description of the model.
         is_default_version (bool): When set to True, the newly uploaded model version
             will automatically have alias "default" included. When set to False, the
-            "default" alias will not be moved
-        version_description (str): Description of the version of the model being
-            uploaded.
+            "default" alias will not be moved.
+        version_description (str, optional): Description of the version of the model
+            being uploaded. Defaults to None.
         version_alias (str, optional): User provided version alias so that a model
             version can be referenced via alias instead of auto-generated version ID.
-            Defaults to None.
+            Defaults to [].
+        pipeline_timestamp (str, optional):
+        data_version (str, optional):
         model_name (str, optional):
 
     Returns:
@@ -65,9 +67,10 @@ def upload_model(
         logger.info("Parent model not found.")
         parent_model = None
 
-    labels["data_version"] = data_version.replace("T", "")
-    labels["pipeline_timestamp"] = pipeline_timestamp.replace("T", "")
-
+    if data_version is not None:
+        labels["data_version"] = data_version.replace("T", "")
+    if pipeline_timestamp is not None:
+        labels["pipeline_timestamp"] = pipeline_timestamp.replace("T", "")
     if model_name is not None:
         version_alias.append(
             f"{model_name.replace('_', '-')}-{labels.get('timestamp', 'no-timestamp')}"

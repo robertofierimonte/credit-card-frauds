@@ -35,7 +35,9 @@ def compare_champion_challenger(
         higher_is_better (bool, optional): _description_. Defaults to True.
 
     Returns:
-        NamedTuple:
+        bool: Whether the challenger model is better than the current champion
+        float: Value of the metric to optimise for the challenger model
+        float: Value of the metric to optimise for the champion model
     """
     import joblib
     import pandas as pd
