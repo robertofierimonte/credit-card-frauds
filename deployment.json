@@ -90,7 +90,7 @@
               "parameters": {
                 "model_file_name": {
                   "runtimeValue": {
-                    "constant": "model"
+                    "constant": "model.joblib"
                   }
                 },
                 "model_id": {
@@ -198,6 +198,24 @@
                   "runtimeValue": {
                     "constant": "europe-west2-docker.pkg.dev/robertofierimonte-ml-pipe/docker-repo/credit-card-frauds:feature-deploy-pipeline"
                   }
+                },
+                "serving_container_params": {
+                  "runtimeValue": {
+                    "constant": {
+                      "serving_container_args": [
+                        "src.serving_api.app:app",
+                        "--config=./src/serving_api/config.py"
+                      ],
+                      "serving_container_command": [
+                        "gunicorn"
+                      ],
+                      "serving_container_health_route": "/health",
+                      "serving_container_ports": [
+                        8080.0
+                      ],
+                      "serving_container_predict_route": "/predict"
+                    }
+                  }
                 }
               }
             },
@@ -294,8 +312,7 @@
             "artifactType": {
               "schemaTitle": "system.Model",
               "schemaVersion": "0.0.1"
-            },
-            "description": "Model to be uploaded."
+            }
           }
         },
         "parameters": {
@@ -304,23 +321,18 @@
             "parameterType": "STRING"
           },
           "description": {
-            "description": "Description of the model.",
             "parameterType": "STRING"
           },
           "display_name": {
-            "description": "The display name of the model. The name",
             "parameterType": "STRING"
           },
           "is_default_version": {
-            "description": "When set to True, the newly uploaded model version\nwill automatically have alias \"default\" included. When set to False, the\n\"default\" alias will not be moved.",
             "parameterType": "BOOLEAN"
           },
           "labels": {
-            "description": "Labels with user-defined metadata to organise the model.",
             "parameterType": "STRUCT"
           },
           "model_id": {
-            "description": "The ID (name) of the model.",
             "parameterType": "STRING"
           },
           "model_name": {
@@ -332,25 +344,24 @@
             "parameterType": "STRING"
           },
           "project_id": {
-            "description": "GCP Project ID where the model will be saved.",
             "parameterType": "STRING"
           },
           "project_location": {
-            "description": "Location where the model will be saved.",
             "parameterType": "STRING"
           },
           "serving_container_image_uri": {
-            "description": "The URI of the model serving container.\nMust come from the GCP Container Registry or Artifact Registry.",
             "parameterType": "STRING"
+          },
+          "serving_container_params": {
+            "isOptional": true,
+            "parameterType": "STRUCT"
           },
           "version_alias": {
             "defaultValue": [],
-            "description": "User provided version alias so that a model\nversion can be referenced via alias instead of auto-generated version ID.\nDefaults to [].",
             "isOptional": true,
             "parameterType": "LIST"
           },
           "version_description": {
-            "description": "Description of the version of the model\nbeing uploaded. Defaults to None.",
             "isOptional": true,
             "parameterType": "STRING"
           }
@@ -397,7 +408,7 @@
             "sh",
             "-ec",
             "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef deploy_model(\n    model_id: str,\n    endpoint_id: str,\n    project_location: str,\n    project_id: str,\n    dataset_id: str,\n    model_display_name: str = None,\n    endpoint_display_name: str = None,\n    model_label: str = None,\n    monitoring: bool = True,\n) -> None:\n    from google.api_core.exceptions import NotFound\n    from google.cloud import aiplatform\n    from google.cloud.aiplatform import (  # model_monitoring,\n        Endpoint,\n        Model,\n        ModelDeploymentMonitoringJob,\n    )\n    from loguru import logger\n\n    aiplatform.init(project=project_id, location=project_location)\n\n    if model_display_name is None:\n        model_display_name = model_id\n    if endpoint_display_name is None:\n        endpoint_display_name = endpoint_id\n\n    try:\n        model = Model(\n            model_name=model_id,\n            project=project_id,\n            location=project_location,\n            version=model_label,\n        )\n        logger.info(f\"Found model {model_id}, version {model_label}.\")\n    except NotFound:\n        msg = f\"No model found with name {model_id}, version {model_label}.\"\n        logger.error(msg)\n        raise RuntimeError(msg)\n\n    try:\n        endpoint = Endpoint(endpoint_name=endpoint_id)\n        logger.info(f\"Found existing endpoint {endpoint_id}.\")\n        endpoint.undeploy_all()\n        logger.info(\"Undeployed all models from existing endpoint.\")\n\n        for monitoring_job in ModelDeploymentMonitoringJob.list():\n            if monitoring_job.name == endpoint.name:\n                ModelDeploymentMonitoringJob.delete(monitoring_job)\n        logger.info(\"Deleted all monitoring jobs from existing endpoint.\")\n    except NotFound:\n        endpoint = Endpoint.create(\n            display_name=endpoint_display_name,\n            enable_request_response_logging=True,\n            request_response_logging_sampling_rate=1.,\n            request_response_logging_bq_destination_table=(\n                f\"bq://{project_id}.{dataset_id}.endpoint_logging\"\n            )\n        )\n        logger.info(f\"Created endpoint {endpoint_display_name}.\")\n\n    model.deploy(endpoint=endpoint, deployed_model_display_name=model_display_name)\n    logger.info(f\"Deployed model {model_display_name} to \")\n\n"
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef deploy_model(\n    model_id: str,\n    endpoint_id: str,\n    project_location: str,\n    project_id: str,\n    dataset_id: str,\n    model_display_name: str = None,\n    endpoint_display_name: str = None,\n    model_label: str = None,\n    monitoring: bool = True,\n) -> None:\n    from google.api_core.exceptions import NotFound\n    from google.cloud import aiplatform\n    from google.cloud.aiplatform import (  # model_monitoring,\n        Endpoint,\n        Model,\n        ModelDeploymentMonitoringJob,\n    )\n    from loguru import logger\n\n    aiplatform.init(project=project_id, location=project_location)\n\n    if model_display_name is None:\n        model_display_name = model_id\n    if endpoint_display_name is None:\n        endpoint_display_name = endpoint_id\n\n    try:\n        model = Model(\n            model_name=model_id,\n            project=project_id,\n            location=project_location,\n            version=model_label,\n        )\n        logger.info(f\"Found model {model_id}, version {model_label}.\")\n    except NotFound:\n        msg = f\"No model found with name {model_id}, version {model_label}.\"\n        logger.error(msg)\n        raise RuntimeError(msg)\n\n    try:\n        endpoint = Endpoint(endpoint_name=endpoint_id)\n        logger.info(f\"Found existing endpoint {endpoint_id}.\")\n        endpoint.undeploy_all()\n        logger.info(\"Undeployed all models from existing endpoint.\")\n\n        for monitoring_job in ModelDeploymentMonitoringJob.list():\n            if monitoring_job.name == endpoint.name:\n                ModelDeploymentMonitoringJob.delete(monitoring_job)\n        logger.info(\"Deleted all monitoring jobs from existing endpoint.\")\n    except NotFound:\n        endpoint = Endpoint.create(\n            display_name=endpoint_display_name,\n            endpoint_id=endpoint_id,\n            enable_request_response_logging=True,\n            request_response_logging_sampling_rate=1.0,\n            request_response_logging_bq_destination_table=(\n                f\"bq://{project_id}.{dataset_id}.endpoint_logging\"\n            ),\n        )\n        logger.info(f\"Created endpoint {endpoint_display_name}.\")\n\n    model.deploy(endpoint=endpoint, deployed_model_display_name=model_display_name)\n    logger.info(f\"Deployed model {model_display_name} to \")\n\n"
           ],
           "image": "python:3.9"
         }
@@ -417,7 +428,7 @@
             "sh",
             "-ec",
             "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef export_model(\n    model_id: str,\n    project_id: str,\n    project_location: str,\n    model: Output[Model],\n    model_label: str = None,\n    model_file_name: str = None,\n) -> NamedTuple(\"Outputs\", [(\"labels\", dict)]):\n    \"\"\"Export a Vertex AI model from the model registry to GCS.\n\n    Args:\n        model_name (str): The ID (name) of the model.\n        project_id (str): GCP Project ID where the model is stored.\n        project_location (str): Location where the model is stored.\n        model (Output[Model]): The exported model as a KFP Model object. This\n            parameter will be passed automatically by the orchestrator.\n        model_label (str, optional): Version alias of the model. Defaults to None.\n        model_file_name (str, optional): File name of the model inside the model folder.\n            Defaults to None.\n    \"\"\"\n    from google.cloud.aiplatform import Model\n    from loguru import logger\n\n    model_to_be_exported = Model(\n        model_name=model_id,\n        project=project_id,\n        location=project_location,\n        version=model_label,\n    )\n    result = model_to_be_exported.export_model(\n        export_format_id=\"custom-trained\", artifact_destination=model.uri, sync=True\n    )\n\n    model.path = result[\"artifactOutputUri\"]\n    if model_file_name:\n        model.path += f\"/{model_file_name}\"\n    model.metadata[\"resourceName\"] = model_id\n    # model.metadata[\"model_labels\"] = model_to_be_exported.labels[\"model_label\"]\n    logger.info(f\"Exported model to {model.path}.\")\n\n    return (model_to_be_exported.labels,)\n\n"
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef export_model(\n    model_id: str,\n    project_id: str,\n    project_location: str,\n    model: Output[Model],\n    model_label: str = None,\n    model_file_name: str = None,\n) -> NamedTuple(\"Outputs\", [(\"labels\", dict)]):\n    \"\"\"Export a Vertex AI model from the model registry to GCS.\n\n    Args:\n        model_name (str): The ID (name) of the model.\n        project_id (str): GCP Project ID where the model is stored.\n        project_location (str): Location where the model is stored.\n        model (Output[Model]): The exported model as a KFP Model object. This\n            parameter will be passed automatically by the orchestrator.\n        model_label (str, optional): Version alias of the model. Defaults to None.\n        model_file_name (str, optional): File name of the model inside the model folder.\n            Defaults to None.\n    \"\"\"\n    from google.cloud.aiplatform import Model\n    from loguru import logger\n\n    model_to_be_exported = Model(\n        model_name=model_id,\n        project=project_id,\n        location=project_location,\n        version=model_label,\n    )\n\n    logger.debug(f\"URI: {model.uri}.\")\n    logger.debug(f\"Path: {model.path}.\")\n    result = model_to_be_exported.export_model(\n        export_format_id=\"custom-trained\", artifact_destination=model.uri, sync=True\n    )\n\n    model.path = result[\"artifactOutputUri\"]\n    if model_file_name:\n        model.path += f\"/{model_file_name}\"\n    model.metadata[\"resourceName\"] = model_id\n    # model.metadata[\"model_labels\"] = model_to_be_exported.labels[\"model_label\"]\n    logger.info(f\"Exported model to {model.path}.\")\n\n    return (model_to_be_exported.labels,)\n\n"
           ],
           "image": "python:3.9"
         }
@@ -457,7 +468,7 @@
             "sh",
             "-ec",
             "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef upload_model(\n    model_id: str,\n    display_name: str,\n    serving_container_image_uri: str,\n    project_id: str,\n    project_location: str,\n    model: Input[Model],\n    labels: dict,\n    description: str,\n    is_default_version: bool,\n    version_description: str = None,\n    version_alias: list = [],\n    pipeline_timestamp: str = None,\n    data_version: str = None,\n    model_name: str = None,\n) -> str:\n    \"\"\"Upload a model from GCS to the Vertex AI model registry.\n\n    Args:\n        model_id (str): The ID (name) of the model.\n        display_name (str): The display name of the model. The name\n        serving_container_image_uri (str): The URI of the model serving container.\n            Must come from the GCP Container Registry or Artifact Registry.\n        project_id (str): GCP Project ID where the model will be saved.\n        project_location (str): Location where the model will be saved.\n        model (Input[Model]): Model to be uploaded.\n        labels (dict): Labels with user-defined metadata to organise the model.\n        description (str): Description of the model.\n        is_default_version (bool): When set to True, the newly uploaded model version\n            will automatically have alias \"default\" included. When set to False, the\n            \"default\" alias will not be moved.\n        version_description (str, optional): Description of the version of the model\n            being uploaded. Defaults to None.\n        version_alias (str, optional): User provided version alias so that a model\n            version can be referenced via alias instead of auto-generated version ID.\n            Defaults to [].\n        pipeline_timestamp (str, optional):\n        data_version (str, optional):\n        model_name (str, optional):\n\n    Returns:\n        str: Resource name of the exported model\n    \"\"\"\n    from google.api_core.exceptions import NotFound\n    from google.cloud.aiplatform import Model\n    from loguru import logger\n\n    # The URI expects a folder containing the model binaries\n    model_uri = model.uri.rsplit(\"/\", 1)[0]\n\n    # If a model with the same id exists, use it as the parent model\n    try:\n        result_model = Model(\n            model_name=model_id, project=project_id, location=project_location\n        )\n        parent_model = result_model.resource_name\n    except (NotFound, ValueError):\n        logger.info(\"Parent model not found.\")\n        parent_model = None\n\n    if data_version is not None:\n        labels[\"data_version\"] = data_version.replace(\"T\", \"\")\n    if pipeline_timestamp is not None:\n        labels[\"pipeline_timestamp\"] = pipeline_timestamp.replace(\"T\", \"\")\n    if model_name is not None:\n        version_alias.append(\n            f\"{model_name.replace('_', '-')}-{labels.get('timestamp', 'no-timestamp')}\"\n        )\n        labels[\"model_name\"] = model_name\n    if version_alias == []:\n        version_alias = None\n\n    logger.debug(f\"Version aliases: {version_alias}\")\n    logger.debug(f\"Labels: {labels}\")\n    logger.info(\"Uploading model to model registry.\")\n    model = Model.upload(\n        model_id=model_id,\n        project=project_id,\n        location=project_location,\n        display_name=display_name,\n        parent_model=parent_model,\n        version_aliases=version_alias,\n        is_default_version=is_default_version,\n        serving_container_image_uri=serving_container_image_uri,\n        artifact_uri=model_uri,\n        description=description,\n        version_description=version_description,\n        labels=labels,\n        sync=True,\n    )\n    logger.info(f\"Uploaded model {model}.\")\n    return model.resource_name\n\n"
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef upload_model(\n    model_id: str,\n    display_name: str,\n    serving_container_image_uri: str,\n    project_id: str,\n    project_location: str,\n    model: Input[Model],\n    labels: dict,\n    description: str,\n    is_default_version: bool,\n    serving_container_params: dict = None,\n    version_description: str = None,\n    version_alias: list = [],\n    pipeline_timestamp: str = None,\n    data_version: str = None,\n    model_name: str = None,\n) -> str:\n    \"\"\"Upload a model from GCS to the Vertex AI model registry.\n\n    Args:\n        model_id (str): The ID (name) of the model.\n        display_name (str): The display name of the model. The name\n        serving_container_image_uri (str): The URI of the model serving container.\n            Must come from the GCP Container Registry or Artifact Registry.\n        project_id (str): GCP Project ID where the model will be saved.\n        project_location (str): Location where the model will be saved.\n        model (Input[Model]): Model to be uploaded.\n        labels (dict): Labels with user-defined metadata to organise the model.\n        description (str): Description of the model.\n        is_default_version (bool): When set to True, the newly uploaded model version\n            will automatically have alias \"default\" included. When set to False, the\n            \"default\" alias will not be moved.\n        serving_container_params (dict, optional)\n        version_description (str, optional): Description of the version of the model\n            being uploaded. Defaults to None.\n        version_alias (str, optional): User provided version alias so that a model\n            version can be referenced via alias instead of auto-generated version ID.\n            Defaults to [].\n        pipeline_timestamp (str, optional):\n        data_version (str, optional):\n        model_name (str, optional):\n\n    Returns:\n        str: Resource name of the exported model\n    \"\"\"\n    from google.api_core.exceptions import NotFound\n    from google.cloud.aiplatform import Model\n    from loguru import logger\n\n    # The URI expects a folder containing the model binaries\n    model_uri = model.uri.rsplit(\"/\", 1)[0]\n\n    # If a model with the same id exists, use it as the parent model\n    try:\n        result_model = Model(\n            model_name=model_id, project=project_id, location=project_location\n        )\n        parent_model = result_model.resource_name\n    except (NotFound, ValueError):\n        logger.info(\"Parent model not found.\")\n        parent_model = None\n\n    if data_version is not None:\n        labels[\"data_version\"] = data_version.replace(\"T\", \"\")\n    if pipeline_timestamp is not None:\n        labels[\"pipeline_timestamp\"] = pipeline_timestamp.replace(\"T\", \"\")\n    if model_name is not None:\n        version_alias.append(\n            f\"{model_name.replace('_', '-')}-{labels.get('timestamp', 'no-timestamp')}\"\n        )\n        labels[\"model_name\"] = model_name\n    if version_alias == []:\n        version_alias = None\n    if serving_container_params is None:\n        serving_container_params = {}\n\n    logger.debug(f\"Version aliases: {version_alias}\")\n    logger.debug(f\"Labels: {labels}\")\n    logger.debug(f\"Serving container params: {serving_container_params}\")\n\n    logger.info(\"Uploading model to model registry.\")\n    model = Model.upload(\n        model_id=model_id,\n        project=project_id,\n        location=project_location,\n        display_name=display_name,\n        parent_model=parent_model,\n        version_aliases=version_alias,\n        is_default_version=is_default_version,\n        serving_container_image_uri=serving_container_image_uri,\n        artifact_uri=model_uri,\n        description=description,\n        version_description=version_description,\n        labels=labels,\n        sync=True,\n        **serving_container_params,\n    )\n    logger.info(f\"Uploaded model {model}.\")\n    return model.resource_name\n\n"
           ],
           "image": "python:3.9"
         }

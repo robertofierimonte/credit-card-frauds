@@ -9,6 +9,8 @@ from typing import List, Optional
 from google.cloud import aiplatform
 from loguru import logger
 
+from src.trigger.utils import wait_pipeline_until_complete
+
 
 def cf_handler(event: dict, context) -> aiplatform.PipelineJob:
     """Handle the Pub/Sub event and make a call to trigger the KFP pipeline.
@@ -103,6 +105,7 @@ def trigger_pipeline(
     # Execute pipeline in Vertex and optionally wait until completion
     if mode == "run":
         pipeline_job.run(service_account=service_account)
+        wait_pipeline_until_complete(job=pipeline_job)
     else:
         pipeline_job.submit(service_account=service_account)
     return pipeline_job

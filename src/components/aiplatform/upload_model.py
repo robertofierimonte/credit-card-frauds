@@ -17,6 +17,7 @@ def upload_model(
     labels: dict,
     description: str,
     is_default_version: bool,
+    serving_container_params: dict = None,
     version_description: str = None,
     version_alias: list = [],
     pipeline_timestamp: str = None,
@@ -38,6 +39,7 @@ def upload_model(
         is_default_version (bool): When set to True, the newly uploaded model version
             will automatically have alias "default" included. When set to False, the
             "default" alias will not be moved.
+        serving_container_params (dict, optional)
         version_description (str, optional): Description of the version of the model
             being uploaded. Defaults to None.
         version_alias (str, optional): User provided version alias so that a model
@@ -78,9 +80,13 @@ def upload_model(
         labels["model_name"] = model_name
     if version_alias == []:
         version_alias = None
+    if serving_container_params is None:
+        serving_container_params = {}
 
     logger.debug(f"Version aliases: {version_alias}")
     logger.debug(f"Labels: {labels}")
+    logger.debug(f"Serving container params: {serving_container_params}")
+
     logger.info("Uploading model to model registry.")
     model = Model.upload(
         model_id=model_id,
@@ -96,6 +102,7 @@ def upload_model(
         version_description=version_description,
         labels=labels,
         sync=True,
+        **serving_container_params,
     )
     logger.info(f"Uploaded model {model}.")
     return model.resource_name

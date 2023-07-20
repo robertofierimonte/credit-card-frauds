@@ -38,6 +38,9 @@ def export_model(
         location=project_location,
         version=model_label,
     )
+
+    logger.debug(f"URI: {model.uri}.")
+    logger.debug(f"Path: {model.path}.")
     result = model_to_be_exported.export_model(
         export_format_id="custom-trained", artifact_destination=model.uri, sync=True
     )

@@ -439,9 +439,8 @@
                   "runtimeValue": {
                     "constant": {
                       "branch_name": "feature-deploy-pipeline",
-                      "commit_hash": "7e4cdb6",
-                      "pipeline_name": "frauds-training-pipeline-feature-deploy-pipeline-7e4cdb6",
-                      "pipeline_tag": "dev"
+                      "commit_hash": "9bed1b1",
+                      "development_stage": "dev"
                     }
                   }
                 },
@@ -475,7 +474,7 @@
               }
             },
             "taskInfo": {
-              "name": "upload-model-2"
+              "name": "Upload challenger model"
             }
           }
         }
@@ -1139,7 +1138,7 @@
               "parameters": {
                 "artifacts_gcs_folder_path": {
                   "runtimeValue": {
-                    "constant": "gs://robertofierimonte-ml-pipe/credit-card-frauds/artifacts/feature-deploy-pipeline/7e4cdb6"
+                    "constant": "gs://robertofierimonte-ml-pipe/credit-card-frauds/artifacts/feature-deploy-pipeline/9bed1b1"
                   }
                 },
                 "location": {
@@ -1392,7 +1391,7 @@
                 },
                 "model_gcs_folder_path": {
                   "runtimeValue": {
-                    "constant": "gs://robertofierimonte-ml-pipe/credit-card-frauds/models/feature-deploy-pipeline/7e4cdb6"
+                    "constant": "gs://robertofierimonte-ml-pipe/credit-card-frauds/models/feature-deploy-pipeline/9bed1b1"
                   }
                 },
                 "model_name": {
@@ -1484,9 +1483,8 @@
                   "runtimeValue": {
                     "constant": {
                       "branch_name": "feature-deploy-pipeline",
-                      "commit_hash": "7e4cdb6",
-                      "pipeline_name": "frauds-training-pipeline-feature-deploy-pipeline-7e4cdb6",
-                      "pipeline_tag": "dev"
+                      "commit_hash": "9bed1b1",
+                      "development_stage": "dev"
                     }
                   }
                 },
@@ -1972,7 +1970,7 @@
                     "sh",
                     "-ec",
                     "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-                    "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef train_evaluate_model(\n    training_data: Input[Dataset],\n    validation_data: Input[Dataset],\n    target_column: str,\n    model_name: str,\n    train_metrics: Output[Metrics],\n    valid_metrics: Output[Metrics],\n    valid_pr_curve: Output[Artifact],\n    model: Output[Model],\n    models_params: dict = {},\n    fit_args: dict = {},\n    data_processing_args: dict = {},\n    model_gcs_folder_path: str = None,\n) -> None:\n    \"\"\"Train a classification model on the training data.\n\n    Args:\n        training_data (Input[Dataset]): Training data as a KFP Dataset object.\n        validation_data (Input[Dataset]): Validation data (used to prevent overfitting)\n            as a KFP Dataset object.\n        target_column (str): Column containing the target column for classification.\n        model_name (str): Name of the classifier that will be trained. Must be one of\n            'logistic_regression', 'sgd_classifier', 'random_forest', 'lightgbm',\n            'xgboost'.\n        models_params (dict): Hyperparameters of the model. Default to an empty dict.\n        fit_args (dict): Arguments used when fitting the model.\n            Default to an empty dict.\n        data_processing_args (dict): Arguments used when running extra processing on\n            the data (such as scaling or oversampling). Default to an empty dict.\n        train_metrics (Output[Metrics]):\n        valid_metrics (Output[Metrics]):\n        model (Output[Model]): Output model as a KFP Model object, this parameter\n            will be passed automatically by the orchestrator. The .path\n            attribute is the location of the joblib file in GCS.\n    \"\"\"\n    from pathlib import Path\n\n    import joblib\n    import pandas as pd\n    from google.cloud import storage\n    from lightgbm import LGBMClassifier\n    from loguru import logger\n    from sklearn.ensemble import RandomForestClassifier\n    from sklearn.linear_model import LogisticRegression, SGDClassifier\n    from xgboost import XGBClassifier\n\n    from src.base.model import evaluate_model, train_model\n    from src.base.visualisation import plot_precision_recall_curve\n\n    df_train = pd.read_parquet(training_data.path)\n    df_train = df_train.drop(columns=[\"transaction_id\"])\n    y_train = df_train.pop(target_column)\n    logger.info(f\"Loaded training data, shape {df_train.shape}.\")\n\n    df_valid = pd.read_parquet(validation_data.path)\n    df_valid = df_valid.drop(columns=[\"transaction_id\"])\n    y_valid = df_valid.pop(target_column)\n    logger.info(f\"Loaded evaluation data, shape {df_valid.shape}.\")\n\n    use_eval_set = False\n    model_params = models_params.get(model_name, {})\n    if model_name == \"logistic_regression\":\n        classifier = LogisticRegression(random_state=42, **model_params)\n    elif model_name == \"sgd_classifier\":\n        classifier = SGDClassifier(random_state=42, **model_params)\n    elif model_name == \"random_forest\":\n        classifier = RandomForestClassifier(random_state=42, **model_params)\n    elif model_name == \"lightgbm\":\n        classifier = LGBMClassifier(random_state=42, **model_params)\n        use_eval_set = True\n    elif model_name == \"xgboost\":\n        classifier = XGBClassifier(\n            use_label_encoder=False, random_state=42, **model_params\n        )\n        use_eval_set = True\n    else:\n        msg = (\n            \"`model_name` must be one of 'logistic_regression', 'sgd_classifier', \"\n            \"'random_forest', 'lightgbm', 'xgboost'.\"\n        )\n        logger.error(msg)\n        raise ValueError(msg)\n\n    logger.info(f\"Training model {model_name}.\")\n    classifier, training_metrics = train_model(\n        classifier,\n        X_train=df_train,\n        y_train=y_train,\n        X_valid=df_valid,\n        y_valid=y_valid,\n        use_eval_set=use_eval_set,\n        fit_args=fit_args.get(model_name, {}),\n        **data_processing_args,\n    )\n    logger.info(\"Training completed.\")\n    logger.debug(f\"Type of classifier: {type(classifier)}.\")\n    logger.debug(f\"Classifier: {classifier}.\")\n    for k, v in training_metrics.items():\n        if k != \"Precision Recall Curve\":\n            train_metrics.log_metric(k, v)\n\n    validation_metrics, _, _ = evaluate_model(classifier, df_valid, y_valid)\n    logger.info(\"Evaluation completed.\")\n    for k, v in validation_metrics.items():\n        if k != \"Precision Recall Curve\":\n            valid_metrics.log_metric(k, v)\n\n    logger.debug(f\"Type of classifier: {type(classifier)}.\")\n    logger.debug(f\"Classifier: {classifier}.\")\n\n    if model_gcs_folder_path is not None:\n        model_gcs_folder_path = model_gcs_folder_path.replace(\"gs://\", \"/gcs/\")\n        model.path = model_gcs_folder_path\n        valid_pr_curve.path = model_gcs_folder_path\n\n    model.path = f\"{model.path}/{model_name}\"\n    model_dir = Path(model.path).parent.absolute()\n    model_dir.mkdir(parents=True, exist_ok=True)\n\n    logger.info(f\"Saving model to {model.path}.\")\n    joblib.dump(classifier, model.path)\n\n    valid_pr_curve.path = (\n        valid_pr_curve.path + f\"/precision_recall_curve_{model_name}.png\"\n    )\n    _ = plot_precision_recall_curve(\n        model=classifier,\n        model_name=model_name,\n        X=df_valid,\n        y=y_valid,\n        save_path=valid_pr_curve.path,\n    )\n\n    client = storage.Client()\n    logger.debug(f\"URI: {valid_pr_curve.uri}\")\n    logger.debug(f\"Path: {valid_pr_curve.path}\")\n\n"
+                    "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef train_evaluate_model(\n    training_data: Input[Dataset],\n    validation_data: Input[Dataset],\n    target_column: str,\n    model_name: str,\n    train_metrics: Output[Metrics],\n    valid_metrics: Output[Metrics],\n    valid_pr_curve: Output[Artifact],\n    model: Output[Model],\n    models_params: dict = {},\n    fit_args: dict = {},\n    data_processing_args: dict = {},\n    model_gcs_folder_path: str = None,\n) -> None:\n    \"\"\"Train a classification model on the training data.\n\n    Args:\n        training_data (Input[Dataset]): Training data as a KFP Dataset object.\n        validation_data (Input[Dataset]): Validation data (used to prevent overfitting)\n            as a KFP Dataset object.\n        target_column (str): Column containing the target column for classification.\n        model_name (str): Name of the classifier that will be trained. Must be one of\n            'logistic_regression', 'sgd_classifier', 'random_forest', 'lightgbm',\n            'xgboost'.\n        models_params (dict): Hyperparameters of the model. Default to an empty dict.\n        fit_args (dict): Arguments used when fitting the model.\n            Default to an empty dict.\n        data_processing_args (dict): Arguments used when running extra processing on\n            the data (such as scaling or oversampling). Default to an empty dict.\n        train_metrics (Output[Metrics]):\n        valid_metrics (Output[Metrics]):\n        model (Output[Model]): Output model as a KFP Model object, this parameter\n            will be passed automatically by the orchestrator. The .path\n            attribute is the location of the joblib file in GCS.\n    \"\"\"\n    from pathlib import Path\n\n    import joblib\n    import pandas as pd\n    from google.cloud import storage\n    from lightgbm import LGBMClassifier\n    from loguru import logger\n    from sklearn.ensemble import RandomForestClassifier\n    from sklearn.linear_model import LogisticRegression, SGDClassifier\n    from xgboost import XGBClassifier\n\n    from src.base.model import evaluate_model, train_model\n    from src.base.visualisation import plot_precision_recall_curve\n\n    df_train = pd.read_parquet(training_data.path)\n    df_train = df_train.drop(columns=[\"transaction_id\"])\n    y_train = df_train.pop(target_column)\n    logger.info(f\"Loaded training data, shape {df_train.shape}.\")\n\n    df_valid = pd.read_parquet(validation_data.path)\n    df_valid = df_valid.drop(columns=[\"transaction_id\"])\n    y_valid = df_valid.pop(target_column)\n    logger.info(f\"Loaded evaluation data, shape {df_valid.shape}.\")\n\n    use_eval_set = False\n    model_params = models_params.get(model_name, {})\n    if model_name == \"logistic_regression\":\n        classifier = LogisticRegression(random_state=42, **model_params)\n    elif model_name == \"sgd_classifier\":\n        classifier = SGDClassifier(random_state=42, **model_params)\n    elif model_name == \"random_forest\":\n        classifier = RandomForestClassifier(random_state=42, **model_params)\n    elif model_name == \"lightgbm\":\n        classifier = LGBMClassifier(random_state=42, **model_params)\n        use_eval_set = True\n    elif model_name == \"xgboost\":\n        classifier = XGBClassifier(\n            use_label_encoder=False, random_state=42, **model_params\n        )\n        use_eval_set = True\n    else:\n        msg = (\n            \"`model_name` must be one of 'logistic_regression', 'sgd_classifier', \"\n            \"'random_forest', 'lightgbm', 'xgboost'.\"\n        )\n        logger.error(msg)\n        raise ValueError(msg)\n\n    logger.info(f\"Training model {model_name}.\")\n    classifier, training_metrics = train_model(\n        classifier,\n        X_train=df_train,\n        y_train=y_train,\n        X_valid=df_valid,\n        y_valid=y_valid,\n        use_eval_set=use_eval_set,\n        fit_args=fit_args.get(model_name, {}),\n        **data_processing_args,\n    )\n    logger.info(\"Training completed.\")\n    logger.debug(f\"Type of classifier: {type(classifier)}.\")\n    logger.debug(f\"Classifier: {classifier}.\")\n    for k, v in training_metrics.items():\n        if k != \"Precision Recall Curve\":\n            train_metrics.log_metric(k, v)\n\n    validation_metrics, _, _ = evaluate_model(classifier, df_valid, y_valid)\n    logger.info(\"Evaluation completed.\")\n    for k, v in validation_metrics.items():\n        if k != \"Precision Recall Curve\":\n            valid_metrics.log_metric(k, v)\n\n    logger.debug(f\"Type of classifier: {type(classifier)}.\")\n    logger.debug(f\"Classifier: {classifier}.\")\n\n    if model_gcs_folder_path is not None:\n        model_gcs_folder_path = model_gcs_folder_path.replace(\"gs://\", \"/gcs/\")\n        model.path = model_gcs_folder_path\n        valid_pr_curve.path = model_gcs_folder_path\n\n    model.path = f\"{model.path}/{model_name}/model.joblib\"\n    model_dir = Path(model.path).parent.absolute()\n    model_dir.mkdir(parents=True, exist_ok=True)\n\n    logger.info(f\"Saving model to {model.path}.\")\n    joblib.dump(classifier, model.path)\n\n    valid_pr_curve.path = (\n        valid_pr_curve.path + f\"/precision_recall_curve_{model_name}.png\"\n    )\n    _ = plot_precision_recall_curve(\n        model=classifier,\n        model_name=model_name,\n        X=df_valid,\n        y=y_valid,\n        save_path=valid_pr_curve.path,\n    )\n\n    client = storage.Client()\n\n"
                   ],
                   "image_uri": "europe-west2-docker.pkg.dev/robertofierimonte-ml-pipe/docker-repo/credit-card-frauds:feature-deploy-pipeline"
                 },
@@ -2033,8 +2031,7 @@
             "artifactType": {
               "schemaTitle": "system.Model",
               "schemaVersion": "0.0.1"
-            },
-            "description": "Model to be uploaded."
+            }
           }
         },
         "parameters": {
@@ -2043,23 +2040,18 @@
             "parameterType": "STRING"
           },
           "description": {
-            "description": "Description of the model.",
             "parameterType": "STRING"
           },
           "display_name": {
-            "description": "The display name of the model. The name",
             "parameterType": "STRING"
           },
           "is_default_version": {
-            "description": "When set to True, the newly uploaded model version\nwill automatically have alias \"default\" included. When set to False, the\n\"default\" alias will not be moved.",
             "parameterType": "BOOLEAN"
           },
           "labels": {
-            "description": "Labels with user-defined metadata to organise the model.",
             "parameterType": "STRUCT"
           },
           "model_id": {
-            "description": "The ID (name) of the model.",
             "parameterType": "STRING"
           },
           "model_name": {
@@ -2071,25 +2063,24 @@
             "parameterType": "STRING"
           },
           "project_id": {
-            "description": "GCP Project ID where the model will be saved.",
             "parameterType": "STRING"
           },
           "project_location": {
-            "description": "Location where the model will be saved.",
             "parameterType": "STRING"
           },
           "serving_container_image_uri": {
-            "description": "The URI of the model serving container.\nMust come from the GCP Container Registry or Artifact Registry.",
             "parameterType": "STRING"
+          },
+          "serving_container_params": {
+            "isOptional": true,
+            "parameterType": "STRUCT"
           },
           "version_alias": {
             "defaultValue": [],
-            "description": "User provided version alias so that a model\nversion can be referenced via alias instead of auto-generated version ID.\nDefaults to [].",
             "isOptional": true,
             "parameterType": "LIST"
           },
           "version_description": {
-            "description": "Description of the version of the model\nbeing uploaded. Defaults to None.",
             "isOptional": true,
             "parameterType": "STRING"
           }
@@ -2111,8 +2102,7 @@
             "artifactType": {
               "schemaTitle": "system.Model",
               "schemaVersion": "0.0.1"
-            },
-            "description": "Model to be uploaded."
+            }
           }
         },
         "parameters": {
@@ -2121,23 +2111,18 @@
             "parameterType": "STRING"
           },
           "description": {
-            "description": "Description of the model.",
             "parameterType": "STRING"
           },
           "display_name": {
-            "description": "The display name of the model. The name",
             "parameterType": "STRING"
           },
           "is_default_version": {
-            "description": "When set to True, the newly uploaded model version\nwill automatically have alias \"default\" included. When set to False, the\n\"default\" alias will not be moved.",
             "parameterType": "BOOLEAN"
           },
           "labels": {
-            "description": "Labels with user-defined metadata to organise the model.",
             "parameterType": "STRUCT"
           },
           "model_id": {
-            "description": "The ID (name) of the model.",
             "parameterType": "STRING"
           },
           "model_name": {
@@ -2149,25 +2134,24 @@
             "parameterType": "STRING"
           },
           "project_id": {
-            "description": "GCP Project ID where the model will be saved.",
             "parameterType": "STRING"
           },
           "project_location": {
-            "description": "Location where the model will be saved.",
             "parameterType": "STRING"
           },
           "serving_container_image_uri": {
-            "description": "The URI of the model serving container.\nMust come from the GCP Container Registry or Artifact Registry.",
             "parameterType": "STRING"
+          },
+          "serving_container_params": {
+            "isOptional": true,
+            "parameterType": "STRUCT"
           },
           "version_alias": {
             "defaultValue": [],
-            "description": "User provided version alias so that a model\nversion can be referenced via alias instead of auto-generated version ID.\nDefaults to [].",
             "isOptional": true,
             "parameterType": "LIST"
           },
           "version_description": {
-            "description": "Description of the version of the model\nbeing uploaded. Defaults to None.",
             "isOptional": true,
             "parameterType": "STRING"
           }
@@ -2480,7 +2464,7 @@
             "sh",
             "-ec",
             "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef upload_model(\n    model_id: str,\n    display_name: str,\n    serving_container_image_uri: str,\n    project_id: str,\n    project_location: str,\n    model: Input[Model],\n    labels: dict,\n    description: str,\n    is_default_version: bool,\n    version_description: str = None,\n    version_alias: list = [],\n    pipeline_timestamp: str = None,\n    data_version: str = None,\n    model_name: str = None,\n) -> str:\n    \"\"\"Upload a model from GCS to the Vertex AI model registry.\n\n    Args:\n        model_id (str): The ID (name) of the model.\n        display_name (str): The display name of the model. The name\n        serving_container_image_uri (str): The URI of the model serving container.\n            Must come from the GCP Container Registry or Artifact Registry.\n        project_id (str): GCP Project ID where the model will be saved.\n        project_location (str): Location where the model will be saved.\n        model (Input[Model]): Model to be uploaded.\n        labels (dict): Labels with user-defined metadata to organise the model.\n        description (str): Description of the model.\n        is_default_version (bool): When set to True, the newly uploaded model version\n            will automatically have alias \"default\" included. When set to False, the\n            \"default\" alias will not be moved.\n        version_description (str, optional): Description of the version of the model\n            being uploaded. Defaults to None.\n        version_alias (str, optional): User provided version alias so that a model\n            version can be referenced via alias instead of auto-generated version ID.\n            Defaults to [].\n        pipeline_timestamp (str, optional):\n        data_version (str, optional):\n        model_name (str, optional):\n\n    Returns:\n        str: Resource name of the exported model\n    \"\"\"\n    from google.api_core.exceptions import NotFound\n    from google.cloud.aiplatform import Model\n    from loguru import logger\n\n    # The URI expects a folder containing the model binaries\n    model_uri = model.uri.rsplit(\"/\", 1)[0]\n\n    # If a model with the same id exists, use it as the parent model\n    try:\n        result_model = Model(\n            model_name=model_id, project=project_id, location=project_location\n        )\n        parent_model = result_model.resource_name\n    except (NotFound, ValueError):\n        logger.info(\"Parent model not found.\")\n        parent_model = None\n\n    if data_version is not None:\n        labels[\"data_version\"] = data_version.replace(\"T\", \"\")\n    if pipeline_timestamp is not None:\n        labels[\"pipeline_timestamp\"] = pipeline_timestamp.replace(\"T\", \"\")\n    if model_name is not None:\n        version_alias.append(\n            f\"{model_name.replace('_', '-')}-{labels.get('timestamp', 'no-timestamp')}\"\n        )\n        labels[\"model_name\"] = model_name\n    if version_alias == []:\n        version_alias = None\n\n    logger.debug(f\"Version aliases: {version_alias}\")\n    logger.debug(f\"Labels: {labels}\")\n    logger.info(\"Uploading model to model registry.\")\n    model = Model.upload(\n        model_id=model_id,\n        project=project_id,\n        location=project_location,\n        display_name=display_name,\n        parent_model=parent_model,\n        version_aliases=version_alias,\n        is_default_version=is_default_version,\n        serving_container_image_uri=serving_container_image_uri,\n        artifact_uri=model_uri,\n        description=description,\n        version_description=version_description,\n        labels=labels,\n        sync=True,\n    )\n    logger.info(f\"Uploaded model {model}.\")\n    return model.resource_name\n\n"
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef upload_model(\n    model_id: str,\n    display_name: str,\n    serving_container_image_uri: str,\n    project_id: str,\n    project_location: str,\n    model: Input[Model],\n    labels: dict,\n    description: str,\n    is_default_version: bool,\n    serving_container_params: dict = None,\n    version_description: str = None,\n    version_alias: list = [],\n    pipeline_timestamp: str = None,\n    data_version: str = None,\n    model_name: str = None,\n) -> str:\n    \"\"\"Upload a model from GCS to the Vertex AI model registry.\n\n    Args:\n        model_id (str): The ID (name) of the model.\n        display_name (str): The display name of the model. The name\n        serving_container_image_uri (str): The URI of the model serving container.\n            Must come from the GCP Container Registry or Artifact Registry.\n        project_id (str): GCP Project ID where the model will be saved.\n        project_location (str): Location where the model will be saved.\n        model (Input[Model]): Model to be uploaded.\n        labels (dict): Labels with user-defined metadata to organise the model.\n        description (str): Description of the model.\n        is_default_version (bool): When set to True, the newly uploaded model version\n            will automatically have alias \"default\" included. When set to False, the\n            \"default\" alias will not be moved.\n        serving_container_params (dict, optional)\n        version_description (str, optional): Description of the version of the model\n            being uploaded. Defaults to None.\n        version_alias (str, optional): User provided version alias so that a model\n            version can be referenced via alias instead of auto-generated version ID.\n            Defaults to [].\n        pipeline_timestamp (str, optional):\n        data_version (str, optional):\n        model_name (str, optional):\n\n    Returns:\n        str: Resource name of the exported model\n    \"\"\"\n    from google.api_core.exceptions import NotFound\n    from google.cloud.aiplatform import Model\n    from loguru import logger\n\n    # The URI expects a folder containing the model binaries\n    model_uri = model.uri.rsplit(\"/\", 1)[0]\n\n    # If a model with the same id exists, use it as the parent model\n    try:\n        result_model = Model(\n            model_name=model_id, project=project_id, location=project_location\n        )\n        parent_model = result_model.resource_name\n    except (NotFound, ValueError):\n        logger.info(\"Parent model not found.\")\n        parent_model = None\n\n    if data_version is not None:\n        labels[\"data_version\"] = data_version.replace(\"T\", \"\")\n    if pipeline_timestamp is not None:\n        labels[\"pipeline_timestamp\"] = pipeline_timestamp.replace(\"T\", \"\")\n    if model_name is not None:\n        version_alias.append(\n            f\"{model_name.replace('_', '-')}-{labels.get('timestamp', 'no-timestamp')}\"\n        )\n        labels[\"model_name\"] = model_name\n    if version_alias == []:\n        version_alias = None\n    if serving_container_params is None:\n        serving_container_params = {}\n\n    logger.debug(f\"Version aliases: {version_alias}\")\n    logger.debug(f\"Labels: {labels}\")\n    logger.debug(f\"Serving container params: {serving_container_params}\")\n\n    logger.info(\"Uploading model to model registry.\")\n    model = Model.upload(\n        model_id=model_id,\n        project=project_id,\n        location=project_location,\n        display_name=display_name,\n        parent_model=parent_model,\n        version_aliases=version_alias,\n        is_default_version=is_default_version,\n        serving_container_image_uri=serving_container_image_uri,\n        artifact_uri=model_uri,\n        description=description,\n        version_description=version_description,\n        labels=labels,\n        sync=True,\n        **serving_container_params,\n    )\n    logger.info(f\"Uploaded model {model}.\")\n    return model.resource_name\n\n"
           ],
           "image": "python:3.9"
         }
@@ -2500,7 +2484,7 @@
             "sh",
             "-ec",
             "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef upload_model(\n    model_id: str,\n    display_name: str,\n    serving_container_image_uri: str,\n    project_id: str,\n    project_location: str,\n    model: Input[Model],\n    labels: dict,\n    description: str,\n    is_default_version: bool,\n    version_description: str = None,\n    version_alias: list = [],\n    pipeline_timestamp: str = None,\n    data_version: str = None,\n    model_name: str = None,\n) -> str:\n    \"\"\"Upload a model from GCS to the Vertex AI model registry.\n\n    Args:\n        model_id (str): The ID (name) of the model.\n        display_name (str): The display name of the model. The name\n        serving_container_image_uri (str): The URI of the model serving container.\n            Must come from the GCP Container Registry or Artifact Registry.\n        project_id (str): GCP Project ID where the model will be saved.\n        project_location (str): Location where the model will be saved.\n        model (Input[Model]): Model to be uploaded.\n        labels (dict): Labels with user-defined metadata to organise the model.\n        description (str): Description of the model.\n        is_default_version (bool): When set to True, the newly uploaded model version\n            will automatically have alias \"default\" included. When set to False, the\n            \"default\" alias will not be moved.\n        version_description (str, optional): Description of the version of the model\n            being uploaded. Defaults to None.\n        version_alias (str, optional): User provided version alias so that a model\n            version can be referenced via alias instead of auto-generated version ID.\n            Defaults to [].\n        pipeline_timestamp (str, optional):\n        data_version (str, optional):\n        model_name (str, optional):\n\n    Returns:\n        str: Resource name of the exported model\n    \"\"\"\n    from google.api_core.exceptions import NotFound\n    from google.cloud.aiplatform import Model\n    from loguru import logger\n\n    # The URI expects a folder containing the model binaries\n    model_uri = model.uri.rsplit(\"/\", 1)[0]\n\n    # If a model with the same id exists, use it as the parent model\n    try:\n        result_model = Model(\n            model_name=model_id, project=project_id, location=project_location\n        )\n        parent_model = result_model.resource_name\n    except (NotFound, ValueError):\n        logger.info(\"Parent model not found.\")\n        parent_model = None\n\n    if data_version is not None:\n        labels[\"data_version\"] = data_version.replace(\"T\", \"\")\n    if pipeline_timestamp is not None:\n        labels[\"pipeline_timestamp\"] = pipeline_timestamp.replace(\"T\", \"\")\n    if model_name is not None:\n        version_alias.append(\n            f\"{model_name.replace('_', '-')}-{labels.get('timestamp', 'no-timestamp')}\"\n        )\n        labels[\"model_name\"] = model_name\n    if version_alias == []:\n        version_alias = None\n\n    logger.debug(f\"Version aliases: {version_alias}\")\n    logger.debug(f\"Labels: {labels}\")\n    logger.info(\"Uploading model to model registry.\")\n    model = Model.upload(\n        model_id=model_id,\n        project=project_id,\n        location=project_location,\n        display_name=display_name,\n        parent_model=parent_model,\n        version_aliases=version_alias,\n        is_default_version=is_default_version,\n        serving_container_image_uri=serving_container_image_uri,\n        artifact_uri=model_uri,\n        description=description,\n        version_description=version_description,\n        labels=labels,\n        sync=True,\n    )\n    logger.info(f\"Uploaded model {model}.\")\n    return model.resource_name\n\n"
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef upload_model(\n    model_id: str,\n    display_name: str,\n    serving_container_image_uri: str,\n    project_id: str,\n    project_location: str,\n    model: Input[Model],\n    labels: dict,\n    description: str,\n    is_default_version: bool,\n    serving_container_params: dict = None,\n    version_description: str = None,\n    version_alias: list = [],\n    pipeline_timestamp: str = None,\n    data_version: str = None,\n    model_name: str = None,\n) -> str:\n    \"\"\"Upload a model from GCS to the Vertex AI model registry.\n\n    Args:\n        model_id (str): The ID (name) of the model.\n        display_name (str): The display name of the model. The name\n        serving_container_image_uri (str): The URI of the model serving container.\n            Must come from the GCP Container Registry or Artifact Registry.\n        project_id (str): GCP Project ID where the model will be saved.\n        project_location (str): Location where the model will be saved.\n        model (Input[Model]): Model to be uploaded.\n        labels (dict): Labels with user-defined metadata to organise the model.\n        description (str): Description of the model.\n        is_default_version (bool): When set to True, the newly uploaded model version\n            will automatically have alias \"default\" included. When set to False, the\n            \"default\" alias will not be moved.\n        serving_container_params (dict, optional)\n        version_description (str, optional): Description of the version of the model\n            being uploaded. Defaults to None.\n        version_alias (str, optional): User provided version alias so that a model\n            version can be referenced via alias instead of auto-generated version ID.\n            Defaults to [].\n        pipeline_timestamp (str, optional):\n        data_version (str, optional):\n        model_name (str, optional):\n\n    Returns:\n        str: Resource name of the exported model\n    \"\"\"\n    from google.api_core.exceptions import NotFound\n    from google.cloud.aiplatform import Model\n    from loguru import logger\n\n    # The URI expects a folder containing the model binaries\n    model_uri = model.uri.rsplit(\"/\", 1)[0]\n\n    # If a model with the same id exists, use it as the parent model\n    try:\n        result_model = Model(\n            model_name=model_id, project=project_id, location=project_location\n        )\n        parent_model = result_model.resource_name\n    except (NotFound, ValueError):\n        logger.info(\"Parent model not found.\")\n        parent_model = None\n\n    if data_version is not None:\n        labels[\"data_version\"] = data_version.replace(\"T\", \"\")\n    if pipeline_timestamp is not None:\n        labels[\"pipeline_timestamp\"] = pipeline_timestamp.replace(\"T\", \"\")\n    if model_name is not None:\n        version_alias.append(\n            f\"{model_name.replace('_', '-')}-{labels.get('timestamp', 'no-timestamp')}\"\n        )\n        labels[\"model_name\"] = model_name\n    if version_alias == []:\n        version_alias = None\n    if serving_container_params is None:\n        serving_container_params = {}\n\n    logger.debug(f\"Version aliases: {version_alias}\")\n    logger.debug(f\"Labels: {labels}\")\n    logger.debug(f\"Serving container params: {serving_container_params}\")\n\n    logger.info(\"Uploading model to model registry.\")\n    model = Model.upload(\n        model_id=model_id,\n        project=project_id,\n        location=project_location,\n        display_name=display_name,\n        parent_model=parent_model,\n        version_aliases=version_alias,\n        is_default_version=is_default_version,\n        serving_container_image_uri=serving_container_image_uri,\n        artifact_uri=model_uri,\n        description=description,\n        version_description=version_description,\n        labels=labels,\n        sync=True,\n        **serving_container_params,\n    )\n    logger.info(f\"Uploaded model {model}.\")\n    return model.resource_name\n\n"
           ],
           "image": "python:3.9"
         }
@@ -2526,7 +2510,7 @@
   },
   "pipelineInfo": {
     "description": "Credit card frauds training Pipeline",
-    "name": "frauds-training-pipeline-feature-deploy-pipeline-7e4cdb6"
+    "name": "frauds-training-pipeline-feature-deploy-pipeline-9bed1b1"
   },
   "root": {
     "dag": {

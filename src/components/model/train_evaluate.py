@@ -126,7 +126,7 @@ def train_evaluate_model(
         model.path = model_gcs_folder_path
         valid_pr_curve.path = model_gcs_folder_path
 
-    model.path = f"{model.path}/{model_name}"
+    model.path = f"{model.path}/{model_name}/model.joblib"
     model_dir = Path(model.path).parent.absolute()
     model_dir.mkdir(parents=True, exist_ok=True)
 
@@ -145,5 +145,3 @@ def train_evaluate_model(
     )
 
     client = storage.Client()
-    logger.debug(f"URI: {valid_pr_curve.uri}")
-    logger.debug(f"Path: {valid_pr_curve.path}")

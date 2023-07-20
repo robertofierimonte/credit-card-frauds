@@ -57,6 +57,7 @@ def deploy_model(
     except NotFound:
         endpoint = Endpoint.create(
             display_name=endpoint_display_name,
+            endpoint_id=endpoint_id,
             enable_request_response_logging=True,
             request_response_logging_sampling_rate=1.0,
             request_response_logging_bq_destination_table=(

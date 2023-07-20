@@ -1,10 +1,12 @@
 import os
+from pathlib import Path
 
 from google_cloud_pipeline_components.v1.vertex_notification_email import (
     VertexNotificationEmailOp,
 )
 from kfp import compiler, dsl
 
+from src.base.utilities import read_json
 from src.components.aiplatform import deploy_model, export_model, upload_model
 from src.components.dependencies import PIPELINE_IMAGE_NAME
 from src.components.helpers import merge_dicts
@@ -33,10 +35,13 @@ def deployment_pipeline(
         data_version (str): _description_
         email_notification_recipients (list): _description_
     """
+
+    config_folder = Path(__file__).parent.parent / "configuration"
+    serving_container_params = read_json(config_folder / "serving_container.json")
+
     notify_email_task = VertexNotificationEmailOp(
         recipients=email_notification_recipients
     )
-
     with dsl.ExitHandler(notify_email_task, name="Notify pipeline result"):
 
         export = (
@@ -65,6 +70,7 @@ def deployment_pipeline(
                 model_id="credit-card-frauds-champion",
                 display_name="credit-card-frauds-champion",
                 serving_container_image_uri=PIPELINE_IMAGE_NAME,
+                serving_container_params=serving_container_params,
                 project_id=project_id,
                 project_location=project_location,
                 labels=merge_labels.output,

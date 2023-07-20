@@ -4,6 +4,7 @@ import google.auth
 import google.auth.transport.requests
 import google.oauth2.id_token
 import requests
+from google.cloud.aiplatform import PipelineJob
 from loguru import logger
 
 # _block_until_complete wait times
@@ -52,11 +53,11 @@ def _get_pipeline_state(job_id: str, location: str = "europe-west2"):
     return pipeline_state
 
 
-def wait_pipeline_until_complete(job_id: str, location: str = "europe-west2"):
+def wait_pipeline_until_complete(job: PipelineJob, location: str = "europe-west2"):
 
     """Wait until pipeline is complete.
     args:
-        job_id: Job ID
+        job: Pipeline Job
         location: GCP location
     """
 
@@ -68,21 +69,21 @@ def wait_pipeline_until_complete(job_id: str, location: str = "europe-west2"):
     while state not in _PIPELINE_COMPLETE_STATES:
 
         time_snapshot_2 = time.time()
-        state = _get_pipeline_state(job_id)
+        state = _get_pipeline_state(job.job_id, location=location)
 
         if time_snapshot_2 - time_snapshot_1 >= log_wait:
 
-            logger.info(f"Pipeline {job_id} is {state}")
+            logger.info(f"Pipeline {job.name} is {state}")
             log_wait = min(log_wait * _WAIT_TIME_MULTIPLIER, _MAX_WAIT_TIME)
             time_snapshot_1 = time_snapshot_2
 
         time.sleep(_JOB_WAIT_TIME)
 
         if state in _PIPELINE_SUCCESS_STATES:
-            logger.info(f"Pipeline {job_id} succeeded.")
+            logger.info(f"Pipeline {job.name} succeeded.")
             return
         elif state in _PIPELINE_COMPLETE_STATES:
-            logger.info(f"Pipeline {job_id} is {state}.")
-            raise RuntimeError(f"Pipeline {job_id} is {state}.")
+            logger.info(f"Pipeline {job.name} is {state}.")
+            raise RuntimeError(f"Pipeline {job.name} is {state}.")
 
-    raise RuntimeError(f"Timed out waiting for job {job_id} to finish.")
+    raise RuntimeError(f"Timed out waiting for job {job.name} to finish.")
