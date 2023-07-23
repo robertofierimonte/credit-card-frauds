@@ -41,8 +41,8 @@ build-image: ## Build the Docker image locally
 
 push-image: ## Push the Docker image to the container registry. Must specify image=<base|bitbucket-cicd>
 	@$(MAKE) build-image && \
-		gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS} && \
-		gcloud auth configure-docker ${VERTEX_LOCATION}-docker.pkg.dev && \
+		gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS} --verbosity error && \
+		gcloud auth configure-docker ${VERTEX_LOCATION}-docker.pkg.dev --verbosity error && \
 		docker push ${IMAGE_NAME}
 
 compile: ## Compile the pipeline. Must specify pipeline=<training|prediction>

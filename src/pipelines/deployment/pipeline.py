@@ -65,7 +65,7 @@ def deployment_pipeline(
             .set_caching_options(True)
         )
 
-        upload = (
+        replace = (
             upload_model(
                 model=export.outputs["model"],
                 model_id="credit-card-frauds-champion",
@@ -91,7 +91,7 @@ def deployment_pipeline(
                 dataset_id=dataset_id,
                 project_location=project_location,
             )
-            .after(upload)
+            .after(replace)
             .set_display_name("Deploy new champion")
             .set_caching_options(True)
         )
