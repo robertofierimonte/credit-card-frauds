@@ -1,6 +1,13 @@
 image: robertofierimonte/data-science-base-image:latest
 
 definitions:
+  caches:
+    poetry:
+      key:
+        files:
+          - poetry.lock
+      path: $BITBUCKET_CLONE_DIR/.venv
+
   steps:
     - step: &set-env-vars
         name: Set environment variables
@@ -8,7 +15,6 @@ definitions:
           - echo export ARTIFACT_REGISTRY_REPO=europe-west2-docker.pkg.dev/$GCLOUD_PROJECT_ID/docker-repo >> .env
           - echo export VERTEX_LOCATION=europe-west2 >> .env
           - echo export VERTEX_PROJECT_ID=$GCLOUD_PROJECT_ID >> .env
-          - echo export POETRY_VIRTUALENV_PATH=$BITBUCKET_CLONE_DIR/.cache/pypoetry/virtualenvs >> .env
           - echo export BASE_IMAGE_NAME=$BITBUCKET_REPO_SLUG >> .env
           - echo export DEVELOPMENT_STAGE=pre-prod >> .env
           - echo export VERTEX_TRIGGER_MODE=run >> .env
@@ -25,6 +31,8 @@ definitions:
           - poetry install --only cicd
           - make compile pipeline=training
           - make compile pipeline=deployment
+        caches:
+          - poetry
         artifacts:
           - training.json
           - deployment.json
@@ -32,31 +40,25 @@ definitions:
         name: Run unit tests
         script:
           - source .env
-          - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
-          - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
           - poetry config virtualenvs.in-project true
-          - poetry install --only base
+          - poetry install --only base,test,cicd
           - make pre-commit
           - make unit-tests
+        caches:
+          - poetry
         artifacts:
           - unit-tests.xml
 
 pipelines:
   default:
-    - stage:
-        name: Test
-        steps:
-          - step: *run-unit-tests
+    - step: *set-env-vars
+    - step: *run-unit-tests
   branches:
     master:
-      - stage:
-          name: Test
-          steps:
-          - step: *run-unit-tests
-      - stage:
-          name: Build
-          steps:
-          - step: *set-env-vars
+    - step: *set-env-vars
+    - step: *run-unit-tests
+    - parallel:
+        steps:
           - step: *compile-pipelines
           - step:
               name: Build base image
@@ -65,7 +67,7 @@ pipelines:
               script:
                 - source .env
                 - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
-                - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+                - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS} --verbosity error
                 - gcloud auth configure-docker europe-west2-docker.pkg.dev --verbosity error
                 - >-
                   docker build
@@ -76,56 +78,12 @@ pipelines:
                   -f ./containers/base/Dockerfile
                   .
                 - docker push --all-tags ${ARTIFACT_REGISTRY_REPO}/${BASE_IMAGE_NAME}
-      - stage:
-          name: Run
-          steps:
-          - step:
-            name: Run training pipeline
-            script:
-              - source .env
-              - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
-              - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
-              - poetry config virtualenvs.in-project true
-              - poetry install --only cicd
-              - make run pipeline=training enable-caching=false environment=prod
-  tags:
-    release_*:
-      - stage:
-          name: Test
-          steps:
-          - step: *run-unit-tests
-      - stage:
-          name: Build
-          steps:
-          - step: *set-env-vars
-          - step: *compile-pipelines
-          - step:
-              name: Build base image
-              services:
-                - docker
-              script:
-                - source .env
-                - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
-                - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
-                - gcloud auth configure-docker europe-west2-docker.pkg.dev --verbosity error
-                - >-
-                  docker build
-                  --build-arg BUILDKIT_INLINE_CACHE=1
-                  --cache-from ${IMAGE_NAME}:latest
-                  --tag ${IMAGE_NAME}
-                  --tag ${ARTIFACT_REGISTRY_REPO}/${BASE_IMAGE_NAME}:${BITBUCKET_TAG}
-                  -f ./containers/base/Dockerfile
-                  .
-                - docker push --all-tags ${ARTIFACT_REGISTRY_REPO}/${BASE_IMAGE_NAME}
-      - stage:
-          name: Run
-          steps:
-          - step:
-            name: Run deployment pipeline
-            script:
-              - source .env
-              - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
-              - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
-              - poetry config virtualenvs.in-project true
-              - poetry install --only cicd
-              - make run pipeline=deployment enable-caching=false environment=prod
+    - step:
+        name: Run training pipeline
+        script:
+          - source .env
+          - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS --verbosity error
+          - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS} --verbosity error
+          - poetry config virtualenvs.in-project true
+          - poetry install --only cicd
+          - make run pipeline=training enable-caching=false environment=prod
