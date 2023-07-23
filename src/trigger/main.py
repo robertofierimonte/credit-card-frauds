@@ -12,7 +12,7 @@ from loguru import logger
 from src.trigger.utils import wait_pipeline_until_complete
 
 
-def cf_handler(event: dict, context) -> aiplatform.PipelineJob:
+def cf_handler(event: dict) -> aiplatform.PipelineJob:
     """Handle the Pub/Sub event and make a call to trigger the KFP pipeline.
 
     Args:
@@ -21,7 +21,6 @@ def cf_handler(event: dict, context) -> aiplatform.PipelineJob:
             `type.googleapis.com/google.pubsub.v1.PubsubMessage`. The `data` field
             maps to the PubsubMessage data in a base64-encoded string. The
             `attributes` field maps to the Pubsub attributes if any is present.
-        context: Metadata of the triggering event.
 
     Returns:
         aiplatform.PipelineJob: Pipeline job that is triggered as result
@@ -198,7 +197,6 @@ def get_args(args: List[str] = None) -> argparse.Namespace:
     Returns:
         argparse.Namespace: Parsed arguments
     """
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--payload", type=str, help="Path to payload json file.")
     parser.add_argument(

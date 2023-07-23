@@ -1,4 +1,4 @@
-from kfp.dsl import Dataset, Input, Metrics, Model, Output, component
+from kfp.dsl import Artifact, Dataset, Input, Metrics, Model, Output, component
 
 from src.components.dependencies import PIPELINE_IMAGE_NAME
 
@@ -12,6 +12,7 @@ def evaluate_model(
     model: Input[Model],
     predictions: Output[Dataset],
     test_metrics: Output[Metrics],
+    metrics_artifact: Output[Artifact],
 ) -> None:
     """Evaluate a trained model on test data and report goodness metrics.
 
@@ -22,7 +23,7 @@ def evaluate_model(
         predictions (Output[Dataset]): Model predictions including input columns
             as a KFP Dataset object. This parameter will be passed automatically
             by the orchestrator.
-        metrics (Output[Metrics]): Output metrics for the trained model. This
+        test_metrics (Output[Metrics]): Output metrics for the trained model. This
             parameter will be passed automatically by the orchestrator and it
             can be referred to by clicking on the component's execution in
             the pipeline.

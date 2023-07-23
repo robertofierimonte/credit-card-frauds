@@ -15,6 +15,26 @@ def deploy_model(
     model_label: str = None,
     monitoring: bool = True,
 ) -> None:
+    """Deploy a ML model from the Vertex model registry to an online endpoint.
+
+    Args:
+        model_id (str): The ID (name) of the model.
+        endpoint_id (str): The ID of the endpoint on which the model will be deployed.
+        project_location (str): Location where the model is stored.
+        project_id (str): GCP Project ID where the model is stored.
+        dataset_id (str): Bigquery dataset ID that will be used to log the endpoint
+            predictions if model monitoring is enabled.
+        model_display_name (str, optional): The display name of the model within
+            the endpoint. If not provided, fallback to `model_id`. Defaults to None.
+        endpoint_display_name (str, optional): The display name of the endpoint.
+            If not provided, fallback to `endpoint_id`. Defaults to None.
+        model_label (str, optional): Version alias of the model. Defaults to None.
+        monitoring (bool, optional): Whether to enable model monitoring for the
+            endpoint. Defaults to True.
+
+    Raises:
+        RuntimeError: If the `model_id` is not found in the model registry.
+    """
     from google.api_core.exceptions import NotFound
     from google.cloud import aiplatform
     from google.cloud.aiplatform import (  # model_monitoring,
@@ -67,4 +87,4 @@ def deploy_model(
         logger.info(f"Created endpoint {endpoint_display_name}.")
 
     model.deploy(endpoint=endpoint, deployed_model_display_name=model_display_name)
-    logger.info(f"Deployed model {model_display_name} to ")
+    logger.info(f"Deployed model {model_id} to endpoint {endpoint_id}.")

@@ -31,6 +31,7 @@ def calculate_precision_top_k(
         k (int): Optional, default value is 200. Number of samples for measuring
             precision, where samples are the k highest rated transactions for
             fraud by the model
+
     Returns:
         float: Score for the P@k metric
     """
@@ -239,7 +240,7 @@ def train_model(
             "'upsampling_with_duplicates'."
         )
         logger.error(msg)
-        raise Exception(msg)
+        raise ValueError(msg)
 
     # Fit model
     if use_eval_set is True and X_valid is not None and y_valid is not None:

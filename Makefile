@@ -29,6 +29,10 @@ setup: ## Install all the required Python dependencies, download the data, and c
 		$(MAKE) download-data && \
 		poetry run python -m ipykernel install --user --name="credit-card-frauds-venv"
 
+unit-tests: ## Runs unit tests for the source code
+	@poetry run python -m coverage run -m xmlrunner discover -b tests/ --output-file unit-tests.xml && \
+		poetry run python -m coverage report -m
+
 upload-data: ## Upload the data from the local folder to Bigquery and create a schema where to save the table. Optionally specify data-version={data_version}
 	@poetry run python -m scripts.upload_data --data-version ${data-version}
 

@@ -32,13 +32,13 @@ def _get_gcp_token():
 
 
 def _get_pipeline_state(job_id: str, location: str = "europe-west2"):
-
     """Get pipeline state.
-    args:
-        job_id: Job ID
-        location: GCP location
-    """
 
+    Args:
+        job_id (str): Vertex pipeline job ID.
+        location (str, optional): GCP location of the job. Defaults to
+            "europe-west2".
+    """
     token, project = _get_gcp_token()
     name = f"projects/{project}/locations/{location}/pipelineJobs/{job_id}"
     url = f"https://{location}-aiplatform.googleapis.com/v1/{name}"
@@ -54,13 +54,16 @@ def _get_pipeline_state(job_id: str, location: str = "europe-west2"):
 
 
 def wait_pipeline_until_complete(job: PipelineJob, location: str = "europe-west2"):
-
     """Wait until pipeline is complete.
-    args:
-        job: Pipeline Job
-        location: GCP location
-    """
 
+    Args:
+        job (PipelineJob): Vertex pipeline job.
+        location (str, optional): GCP location of the job. Defaults to
+            "europe-west2".
+
+    Raises:
+        RuntimeError: If the pipline fails or if it times out.
+    """
     # Wait until pipeline is complete
     log_wait = _LOG_WAIT_TIME
     time_snapshot_1 = time.time()

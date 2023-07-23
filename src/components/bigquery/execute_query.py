@@ -13,8 +13,7 @@ def execute_query(
     dataset_location: str = "europe-west2",
     query_job_config: dict = {},
 ) -> None:
-    """
-    Run a BQ query.
+    """Run a BQ query.
 
     Args:
         query (str): SQL query to execute.
@@ -22,9 +21,11 @@ def execute_query(
         dataset_location (str): BQ dataset location.
         query_job_config (dict): Dict containing optional parameters required
             by the bq query operation. No need to specify destination param.
-            Defaults to {}.
-            See available parameters here
+            Defaults to {}. See available parameters here:
             https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.QueryJobConfig.html
+
+    Returns:
+        GoogleCloudError: If an error is raised by the operation.
     """
     from google.cloud import bigquery
     from google.cloud.exceptions import GoogleCloudError

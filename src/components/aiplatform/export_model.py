@@ -20,7 +20,7 @@ def export_model(
     """Export a Vertex AI model from the model registry to GCS.
 
     Args:
-        model_name (str): The ID (name) of the model.
+        model_id (str): The ID (name) of the model.
         project_id (str): GCP Project ID where the model is stored.
         project_location (str): Location where the model is stored.
         model (Output[Model]): The exported model as a KFP Model object. This
@@ -28,6 +28,9 @@ def export_model(
         model_label (str, optional): Version alias of the model. Defaults to None.
         model_file_name (str, optional): File name of the model inside the model folder.
             Defaults to None.
+
+    Returns:
+        dict: Labels metadata of the experted model.
     """
     from google.cloud.aiplatform import Model
     from loguru import logger
@@ -49,7 +52,6 @@ def export_model(
     if model_file_name:
         model.path += f"/{model_file_name}"
     model.metadata["resourceName"] = model_id
-    # model.metadata["model_labels"] = model_to_be_exported.labels["model_label"]
     logger.info(f"Exported model to {model.path}.")
 
     return (model_to_be_exported.labels,)

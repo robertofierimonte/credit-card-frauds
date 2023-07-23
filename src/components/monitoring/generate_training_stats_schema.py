@@ -14,14 +14,20 @@ def generate_training_stats_schema(
     target_column: str,
     artifacts_gcs_folder_path: str = None,
 ) -> None:
-    """_summary_
+    """Generate the TFDV schema and stats on the training data.
 
     Args:
-        training_data (Input[Dataset]): _description_
-        training_stats (Output[Artifact]): _description_
-        training_schema (Output[Artifact]): _description_
-        target_column (str): _description_
-        artifacts_gcs_folder_path (str, optional): _description_. Defaults to None.
+        training_data (Input[Dataset]): Evaluation data as a KFP Dataset object.
+        training_stats (Output[Artifact]): The serialised training data stats
+            protobuf as a KFP Artifact object. This parameter will be passed
+            automatically by the orchestrator.
+        training_schema (Output[Artifact]): The serialised training data schema
+            protobuf as a KFP Artifact object. This parameter will be passed
+            automatically by the orchestrator.
+        target_column (str): Column containing the target column for classification.
+        artifacts_gcs_folder_path (str, optional): GCS path where to save the stats
+            and schema artifacts. If not provided, use the default path of the
+            component. Defaults to None.
     """
     from pathlib import Path
 

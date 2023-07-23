@@ -21,8 +21,7 @@ def bq_table_to_dataset(
     skip_if_exists: bool = True,
     file_pattern: Optional[str] = None,
 ) -> NamedTuple("Outputs", [("dataset_gcs_prefix", str), ("dataset_gcs_uri", list)]):
-    """
-    Extract BQ table in GCS.
+    """Extract BQ table in GCS.
 
     Args:
         bq_client_project_id (str): Project ID that will be used by the BQ client.
@@ -46,6 +45,9 @@ def bq_table_to_dataset(
 
     Returns:
         NamedTuple (str, list): Output dataset directory and its GCS uri
+
+    Raises:
+        GoogleCloudError: If an error is raised by the operation.
     """
     import os
     from pathlib import Path

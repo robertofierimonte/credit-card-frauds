@@ -60,8 +60,8 @@ def training_pipeline(
     """Credit card frauds classification training pipeline.
 
     Steps:
-    1. Extract input data from BQ
-    2. Train the model via Vertex AI custom training job
+    1. Extract and process input data from BQ
+    2. Train the models via Vertex AI custom training job
     3. Evaluate the model
     4. Upload the model to the Vertex AI model registry
 
@@ -70,9 +70,7 @@ def training_pipeline(
         project_location (str): GCP location whe the pipeline will run.
         dataset_id (str): Bigquery dataset used to store all the staging datasets.
         dataset_location (str): Location of the BQ staging dataset.
-        pipeline_files_gcs_path (str): GCS path where the pipeline files are located.
-        data_version (str): Optional. Empty or a specific timestamp in
-            `%Y%m%dT%H%M%S format.
+        data_version (str): Specific timestamp in `%Y%m%dT%H%M%S format.
         email_notification_recipients (list): List of email addresses that will be
             notified upon completion (whether successful or not) of the pipeline.
     """
@@ -118,12 +116,8 @@ def training_pipeline(
         valid_set_table = f"{dataset_name}.validation"
         test_set_table = f"{dataset_name}.testing"
 
-        models_gcs_folder_path = (
-            f"{PIPELINE_FILES_GCS_PATH}/models/{BRANCH_NAME}/{COMMIT_HASH}"
-        )
-        artifacts_gcs_folder_path = (
-            f"{PIPELINE_FILES_GCS_PATH}/artifacts/{BRANCH_NAME}/{COMMIT_HASH}"
-        )
+        models_gcs_folder_path = f"{PIPELINE_FILES_GCS_PATH}/models/{COMMIT_HASH}"
+        artifacts_gcs_folder_path = f"{PIPELINE_FILES_GCS_PATH}/artifacts/{COMMIT_HASH}"
 
         preprocessing_query = generate_query(
             queries_folder / "q_preprocessing.sql",

@@ -67,6 +67,8 @@ requests = "<2.31.0"
 matplotlib = "==3.5.1"
 seaborn = "==0.12.1"
 google-cloud-bigquery-storage = "^2.20.0"
+mypy = "^1.4.1"
+coverage = "^7.2.7"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.3.1"

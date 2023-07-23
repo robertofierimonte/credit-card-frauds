@@ -1,3 +1,4 @@
 [pydocstyle]
 convention = google
-add_ignore = D100, D102, D103
+add_ignore = D100, D102, D103, D104
+match = ^((?!test_).)*$

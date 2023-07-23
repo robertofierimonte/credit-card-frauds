@@ -3,12 +3,32 @@ import sys
 
 
 class MessageIsNormal(logging.Filter):
-    def filter(self, record):
+    """Filter class for log records that are not errors."""
+
+    def filter(self, record: logging.LogRecord):
+        """Return True if log record is not an error, False otherwise.
+
+        Args:
+            record (LogRecord): Log record to filter.
+
+        Returns:
+            bool: Whether the log is not an error.
+        """
         return record.levelname in ["DEBUG", "INFO", "WARNING"]
 
 
 class MessageIsError(logging.Filter):
+    """Filter class for log records that are errors."""
+
     def filter(self, record):
+        """Return True if log record is an error, False otherwise.
+
+        Args:
+            record (LogRecord): Log record to filter.
+
+        Returns:
+            bool: Whether the log is an error.
+        """
         return record.levelname in ["ERROR", "CRITICAL"]
 
 

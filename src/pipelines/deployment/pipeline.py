@@ -12,8 +12,9 @@ from src.components.dependencies import PIPELINE_IMAGE_NAME
 from src.components.helpers import merge_dicts
 
 COMMIT_TAG = os.getenv("CURRENT_TAG", "no_tag")
+COMMIT_HASH = os.getenv("CURRENT_COMMIT", "no_commit")
 PIPELINE_FILES_GCS_PATH = os.getenv("PIPELINE_FILES_GCS_PATH")
-PIPELINE_NAME = f"frauds-deployment-pipeline-{COMMIT_TAG}"
+PIPELINE_NAME = f"frauds-deployment-pipeline-{COMMIT_TAG}-{COMMIT_HASH}"
 
 
 @dsl.pipeline(name=PIPELINE_NAME, description="Credit card frauds deployment Pipeline")
@@ -25,17 +26,17 @@ def deployment_pipeline(
     data_version: str,
     email_notification_recipients: list,
 ):
-    """_summary_
+    """Credit card frauds classification deployment pipeline.
 
     Args:
-        project_id (str): _description_
-        project_location (str): _description_
-        dataset_id (str): _description_
-        dataset_location (str): _description_
-        data_version (str): _description_
-        email_notification_recipients (list): _description_
+        project_id (str): GCP project ID where the pipeline will run.
+        project_location (str): GCP location whe the pipeline will run.
+        dataset_id (str): Bigquery dataset used to store all the staging datasets.
+        dataset_location (str): Location of the BQ staging dataset.
+        data_version (str): Specific timestamp in `%Y%m%dT%H%M%S format.
+        email_notification_recipients (list): List of email addresses that will be
+            notified upon completion (whether successful or not) of the pipeline.
     """
-
     config_folder = Path(__file__).parent.parent / "configuration"
     serving_container_params = read_json(config_folder / "serving_container.json")
 
