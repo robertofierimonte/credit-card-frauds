@@ -3,6 +3,8 @@ kaggle.json
 notebooks/output/
 model/*
 !/model/.gitkeep
+training.json
+deployment.json
 
 # Compiled and optimised Python bytecode
 __pycache__/

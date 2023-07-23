@@ -24,18 +24,21 @@ def compare_champion_challenger(
         ("challeger_metric", float),
     ],
 ):
-    """_summary_
+    """Compare a challeger model against the champion and return the results.
 
     Args:
-        test_data (Input[Dataset]): _description_
-        target_column (str): _description_
-        challenger_model (Input[Model]): _description_
-        champion_model (Input[Model]): _description_
-        metric_to_optimise (str): _description_
-        higher_is_better (bool, optional): _description_. Defaults to True.
+        test_data (Input[Dataset]): Evaluation data as a KFP Dataset object.
+        target_column (str): Column containing the target column for classification.
+        challenger_model (Input[Model]): Challenger model as a KFP Model object.
+        champion_model (Input[Model]): Champion (incumbent) model as a KFP Model object.
+        metric_to_optimise (str): Metric to use to determine which model is better.
+        higher_is_better (bool, optional): Whether higher values of
+            `metric_to_optimise` mean that a model is better. Defaults to True.
 
     Returns:
-        NamedTuple:
+        bool: Whether the challenger model is better than the current champion
+        float: Value of the metric to optimise for the challenger model
+        float: Value of the metric to optimise for the champion model
     """
     import joblib
     import pandas as pd
@@ -44,9 +47,9 @@ def compare_champion_challenger(
     from src.base.model import evaluate_model
 
     champion = joblib.load(champion_model.path)
-    logger.info("")
+    logger.info("Loaded champion model.")
     challenger = joblib.load(challenger_model.path)
-    logger.info("")
+    logger.info("Loaded challenger model.")
 
     df_test = pd.read_parquet(test_data.path)
     df_test = df_test.drop(columns=["transaction_id"])

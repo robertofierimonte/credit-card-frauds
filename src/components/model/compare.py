@@ -16,17 +16,22 @@ def compare_models(
     metric_to_optimise: str,
     higher_is_better: bool = True,
 ) -> list:
-    """_summary_
+    """Compare a collection of candidate models and return the best model.
 
     Args:
-        test_data (Input[Dataset]): _description_
-        target_column (str): _description_
-        models (Input[Model]): _description_
-        metric_to_optimise (str): _description_
-        higher_is_better (bool, optional): _description_. Defaults to True.
+        test_data (Input[Dataset]): Evaluation data as a KFP Dataset object.
+        target_column (str): Column containing the target column for classification.
+        models (Input[List[Model]]): Collection of candidate models as a list of
+            KFP Model objects.
+        best_model(Output[Model]): Best model as a KFP Model object, this parameter
+            will be passed automatically by the orchestrator. The .path
+            attribute is the location of the joblib file in GCS.
+        metric_to_optimise (str): Metric to use to determine which model is better.
+        higher_is_better (bool, optional): Whether higher values of
+            `metric_to_optimise` mean that a model is better. Defaults to True.
 
     Returns:
-        NamedTuple:
+        list: Values of `metric_to_optimise` for all the candidate models.
     """
     import joblib
     import numpy as np

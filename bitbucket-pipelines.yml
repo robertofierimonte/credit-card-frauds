@@ -1,37 +1,63 @@
 image: robertofierimonte/data-science-base-image:latest
 
+definitions:
+  steps:
+    - step: &set-env-vars
+        name: Set environment variables
+        script:
+          - echo export ARTIFACT_REGISTRY_REPO=europe-west2-docker.pkg.dev/$GCLOUD_PROJECT_ID/docker-repo >> .env
+          - echo export VERTEX_LOCATION=europe-west2 >> .env
+          - echo export VERTEX_PROJECT_ID=$GCLOUD_PROJECT_ID >> .env
+          - echo export POETRY_VIRTUALENV_PATH=$BITBUCKET_CLONE_DIR/.cache/pypoetry/virtualenvs >> .env
+          - echo export BASE_IMAGE_NAME=$BITBUCKET_REPO_SLUG >> .env
+          - echo export DEVELOPMENT_STAGE=pre-prod >> .env
+          - echo export VERTEX_TRIGGER_MODE=run >> .env
+          - echo export MONITORING_EMAIL_ADDRESS=$MONITORING_EMAIL_ADDRESS >> .env
+          - echo export GOOGLE_APPLICATION_CREDENTIALS=$BITBUCKET_CLONE_DIR/key.json >> .env
+          - echo export IMAGE_NAME=europe-west2-docker.pkg.dev/$GCLOUD_PROJECT_ID/docker-repo/$BITBUCKET_REPO_SLUG:latest >> .env
+        artifacts:
+          - .env
+    - step: &compile-pipelines
+        name: Compile KFP pipelines
+        script:
+          - source .env
+          - poetry config virtualenvs.in-project true
+          - poetry install --only cicd
+          - make compile pipeline=training
+          - make compile pipeline=deployment
+        artifacts:
+          - training.json
+          - deployment.json
+    - step: &run-unit-tests
+        name: Run unit tests
+        script:
+          - source .env
+          - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
+          - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+          - poetry config virtualenvs.in-project true
+          - poetry install --only base
+          - make pre-commit
+          - make unit-tests
+        artifacts:
+          - unit-tests.xml
+
 pipelines:
+  default:
+    - stage:
+        name: Test
+        steps:
+          - step: *run-unit-tests
   branches:
     master:
       - stage:
+          name: Test
+          steps:
+          - step: *run-unit-tests
+      - stage:
           name: Build
           steps:
-          - step:
-              name: Set environment variables
-              script:
-                - echo export ARTIFACT_REGISTRY_REPO=europe-west2-docker.pkg.dev/$GCLOUD_PROJECT_ID/docker-repo >> .env
-                - echo export VERTEX_LOCATION="europe-west2" >> .env
-                - echo export VERTEX_PROJECT_ID=$GCLOUD_PROJECT_ID >> .env
-                - echo export POETRY_VIRTUALENV_PATH=$BITBUCKET_CLONE_DIR/.cache/pypoetry/virtualenvs >> .env
-                - echo export BASE_IMAGE_NAME=$BITBUCKET_REPO_SLUG >> .env
-                - echo export DEVELOPMENT_STAGE=pre-prod >> .env
-                - echo export VERTEX_TRIGGER_MODE=submit >> .env
-                - echo export MONITORING_EMAIL_ADDRESS=$MONITORING_EMAIL_ADDRESS >> .env
-                - echo export GOOGLE_APPLICATION_CREDENTIALS=$BITBUCKET_CLONE_DIR/key.json >> .env
-                - echo export IMAGE_NAME=europe-west2-docker.pkg.dev/$GCLOUD_PROJECT_ID/docker-repo/$BITBUCKET_REPO_SLUG:latest >> .env
-                - echo export PIPELINE_FILES_GCS_PATH=gs://$GCLOUD_PROJECT_ID/$BITBUCKET_REPO_SLUG >> .env
-                - echo export VERTEX_PIPELINE_ROOT=gs://$GCLOUD_PROJECT_ID/$BITBUCKET_REPO_SLUG >> .env
-              artifacts:
-                - .env
-          - step:
-              name: Compile training pipeline
-              script:
-                - source .env
-                - poetry config virtualenvs.in-project true
-                - poetry install --only cicd
-                - make compile pipeline=training
-              artifacts:
-                - training.json
+          - step: *set-env-vars
+          - step: *compile-pipelines
           - step:
               name: Build base image
               services:
@@ -43,17 +69,63 @@ pipelines:
                 - gcloud auth configure-docker europe-west2-docker.pkg.dev --verbosity error
                 - >-
                   docker build
+                  --build-arg BUILDKIT_INLINE_CACHE=1
+                  --cache-from ${IMAGE_NAME}:latest
                   --tag ${IMAGE_NAME}
                   --tag ${ARTIFACT_REGISTRY_REPO}/${BASE_IMAGE_NAME}:${BITBUCKET_COMMIT:0:7}
                   -f ./containers/base/Dockerfile
                   .
                 - docker push --all-tags ${ARTIFACT_REGISTRY_REPO}/${BASE_IMAGE_NAME}
-          - step: 
-              name: Run training pipeline
+      - stage:
+          name: Run
+          steps:
+          - step:
+            name: Run training pipeline
+            script:
+              - source .env
+              - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
+              - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+              - poetry config virtualenvs.in-project true
+              - poetry install --only cicd
+              - make run pipeline=training enable-caching=false environment=prod
+  tags:
+    release_*:
+      - stage:
+          name: Test
+          steps:
+          - step: *run-unit-tests
+      - stage:
+          name: Build
+          steps:
+          - step: *set-env-vars
+          - step: *compile-pipelines
+          - step:
+              name: Build base image
+              services:
+                - docker
               script:
                 - source .env
                 - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
                 - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
-                - poetry config virtualenvs.in-project true
-                - poetry install --only cicd
-                - make run pipeline=training environment=prod
+                - gcloud auth configure-docker europe-west2-docker.pkg.dev --verbosity error
+                - >-
+                  docker build
+                  --build-arg BUILDKIT_INLINE_CACHE=1
+                  --cache-from ${IMAGE_NAME}:latest
+                  --tag ${IMAGE_NAME}
+                  --tag ${ARTIFACT_REGISTRY_REPO}/${BASE_IMAGE_NAME}:${BITBUCKET_TAG}
+                  -f ./containers/base/Dockerfile
+                  .
+                - docker push --all-tags ${ARTIFACT_REGISTRY_REPO}/${BASE_IMAGE_NAME}
+      - stage:
+          name: Run
+          steps:
+          - step:
+            name: Run deployment pipeline
+            script:
+              - source .env
+              - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
+              - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+              - poetry config virtualenvs.in-project true
+              - poetry install --only cicd
+              - make run pipeline=deployment enable-caching=false environment=prod

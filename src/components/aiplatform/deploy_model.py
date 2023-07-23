@@ -7,24 +7,44 @@ from src.components.dependencies import GOOGLE_CLOUD_AIPLATFORM, LOGURU, PYTHON
 def deploy_model(
     model_id: str,
     endpoint_id: str,
-    model_location: str,
+    project_location: str,
     project_id: str,
+    dataset_id: str,
     model_display_name: str = None,
     endpoint_display_name: str = None,
     model_label: str = None,
     monitoring: bool = True,
 ) -> None:
+    """Deploy a ML model from the Vertex model registry to an online endpoint.
+
+    Args:
+        model_id (str): The ID (name) of the model.
+        endpoint_id (str): The ID of the endpoint on which the model will be deployed.
+        project_location (str): Location where the model is stored.
+        project_id (str): GCP Project ID where the model is stored.
+        dataset_id (str): Bigquery dataset ID that will be used to log the endpoint
+            predictions if model monitoring is enabled.
+        model_display_name (str, optional): The display name of the model within
+            the endpoint. If not provided, fallback to `model_id`. Defaults to None.
+        endpoint_display_name (str, optional): The display name of the endpoint.
+            If not provided, fallback to `endpoint_id`. Defaults to None.
+        model_label (str, optional): Version alias of the model. Defaults to None.
+        monitoring (bool, optional): Whether to enable model monitoring for the
+            endpoint. Defaults to True.
+
+    Raises:
+        RuntimeError: If the `model_id` is not found in the model registry.
+    """
+    from google.api_core.exceptions import NotFound
     from google.cloud import aiplatform
-    from google.cloud.aiplatform import (
+    from google.cloud.aiplatform import (  # model_monitoring,
         Endpoint,
         Model,
         ModelDeploymentMonitoringJob,
-        model_monitoring,
     )
-    from google.cloud.core.exceptions import NotFound
     from loguru import logger
 
-    aiplatform.init(project=project_id, location=model_location)
+    aiplatform.init(project=project_id, location=project_location)
 
     if model_display_name is None:
         model_display_name = model_id
@@ -35,14 +55,12 @@ def deploy_model(
         model = Model(
             model_name=model_id,
             project=project_id,
-            location=model_location,
+            location=project_location,
+            version=model_label,
         )
-        logger.info(f"Found model {model_display_name}, version {model_label}.")
+        logger.info(f"Found model {model_id}, version {model_label}.")
     except NotFound:
-        msg = (
-            f"No model found with name {model_id} "
-            f"(project {project_id}, location {model_location})."
-        )
+        msg = f"No model found with name {model_id}, version {model_label}."
         logger.error(msg)
         raise RuntimeError(msg)
 
@@ -59,9 +77,14 @@ def deploy_model(
     except NotFound:
         endpoint = Endpoint.create(
             display_name=endpoint_display_name,
+            endpoint_id=endpoint_id,
             enable_request_response_logging=True,
+            request_response_logging_sampling_rate=1.0,
+            request_response_logging_bq_destination_table=(
+                f"bq://{project_id}.{dataset_id}.endpoint_logging"
+            ),
         )
         logger.info(f"Created endpoint {endpoint_display_name}.")
 
     model.deploy(endpoint=endpoint, deployed_model_display_name=model_display_name)
-    logger.info(f"Deployed model {model_display_name} to ")
+    logger.info(f"Deployed model {model_id} to endpoint {endpoint_id}.")

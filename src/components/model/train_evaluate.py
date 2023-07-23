@@ -35,16 +35,30 @@ def train_evaluate_model(
         model_name (str): Name of the classifier that will be trained. Must be one of
             'logistic_regression', 'sgd_classifier', 'random_forest', 'lightgbm',
             'xgboost'.
-        models_params (dict): Hyperparameters of the model. Default to an empty dict.
-        fit_args (dict): Arguments used when fitting the model.
-            Default to an empty dict.
-        data_processing_args (dict): Arguments used when running extra processing on
-            the data (such as scaling or oversampling). Default to an empty dict.
-        train_metrics (Output[Metrics]):
-        valid_metrics (Output[Metrics]):
+        train_metrics (Output[Metrics]): Output metrics for the trained model
+            on the training data. This parameter will be passed automatically
+            by the orchestrator and it can be referred to by clicking on the
+            component's execution in the pipeline.
+        valid_metrics (Output[Metrics]): Output metrics for the trained model
+            on the validation data. This parameter will be passed automatically
+            by the orchestrator and it can be referred to by clicking on the
+            component's execution in the pipeline.
+        valid_pr_curve (Output[Artifact]): The output file for precision-recall plot
+            on the validation data as a KFP Artifact object. This parameter will
+            be passed automatically by the orchestrator.
         model (Output[Model]): Output model as a KFP Model object, this parameter
             will be passed automatically by the orchestrator. The .path
             attribute is the location of the joblib file in GCS.
+        models_params (dict, optional): Hyperparameters of the model. Default to
+            an empty dict.
+        fit_args (dict, optional): Arguments used when fitting the model.
+            Default to an empty dict.
+        data_processing_args (dict, optional): Arguments used when running extra
+            processing on the data (such as scaling or oversampling). Default
+            to an empty dict.
+        model_gcs_folder_path (str, optional): GCS path where to save the trained model
+            and metrics artifacts. If not provided, use the default path of the
+            component. Defaults to None.
     """
     from pathlib import Path
 
@@ -126,7 +140,7 @@ def train_evaluate_model(
         model.path = model_gcs_folder_path
         valid_pr_curve.path = model_gcs_folder_path
 
-    model.path = f"{model.path}/{model_name}"
+    model.path = f"{model.path}/{model_name}/model.joblib"
     model_dir = Path(model.path).parent.absolute()
     model_dir.mkdir(parents=True, exist_ok=True)
 
@@ -145,5 +159,3 @@ def train_evaluate_model(
     )
 
     client = storage.Client()
-    logger.debug(f"URI: {valid_pr_curve.uri}")
-    logger.debug(f"Path: {valid_pr_curve.path}")

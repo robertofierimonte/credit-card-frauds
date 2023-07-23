@@ -16,8 +16,7 @@ def bq_query_to_table(
     dataset_location: str = "europe-west2",
     query_job_config: dict = {},
 ) -> None:
-    """
-    Run query and create a new BQ table.
+    """Run query and create a new BQ table.
 
     Args:
         query (str): SQL query to execute, results are saved in a BQ table.
@@ -32,6 +31,9 @@ def bq_query_to_table(
             Defaults to {}.
             See available parameters here
             https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.QueryJobConfig.html
+
+    Raises:
+        GoogleCloudError: If an error is raised by the operation.
     """
     from google.cloud import bigquery
     from google.cloud.exceptions import GoogleCloudError
