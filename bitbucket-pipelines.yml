@@ -1,6 +1,13 @@
 image: robertofierimonte/data-science-base-image:latest
 
 definitions:
+  commonItems: &config-poetry
+    source .env &&
+    pip install --upgrade pip --quiet &&
+    pip install poetry==1.6.1 --quiet &&
+    poetry config virtualenvs.in-project true &&
+    poetry env use $PYENV_ROOT/versions/$PYTHON_VERSION/bin/python
+
   caches:
     poetry:
       key:
@@ -8,82 +15,118 @@ definitions:
           - poetry.lock
       path: $BITBUCKET_CLONE_DIR/.venv
 
+    pyenv:
+      key:
+        files:
+          - .python-version
+      path: $BITBUCKET_CLONE_DIR/.pyenv
+
+    pre-commit:
+      key:
+        files:
+          - .pre-commit-config.yaml
+      path: $BITBUCKET_CLONE_DIR/.pre-commit
+
   steps:
     - step: &set-env-vars
         name: Set environment variables
         script:
-          - echo export ARTIFACT_REGISTRY_REPO=europe-west2-docker.pkg.dev/$GCLOUD_PROJECT_ID/docker-repo >> .env
-          - echo export VERTEX_LOCATION=europe-west2 >> .env
-          - echo export VERTEX_PROJECT_ID=$GCLOUD_PROJECT_ID >> .env
-          - echo export BASE_IMAGE_NAME=$BITBUCKET_REPO_SLUG >> .env
-          - echo export DEVELOPMENT_STAGE=pre-prod >> .env
+          - echo export DOCKER_REPO=docker-repo >> .env
           - echo export VERTEX_TRIGGER_MODE=run >> .env
           - echo export MONITORING_EMAIL_ADDRESS=$MONITORING_EMAIL_ADDRESS >> .env
           - echo export GOOGLE_APPLICATION_CREDENTIALS=$BITBUCKET_CLONE_DIR/key.json >> .env
-          - echo export IMAGE_NAME=europe-west2-docker.pkg.dev/$GCLOUD_PROJECT_ID/docker-repo/$BITBUCKET_REPO_SLUG:latest >> .env
+          - echo export PYTHON_VERSION=$(cat .python-version) >> .env
+          - echo export PYENV_ROOT=$BITBUCKET_CLONE_DIR/.pyenv >> .env
+          - echo export PYTHON_BUILD_CACHE_PATH=$BITBUCKET_CLONE_DIR/.pyenv-cache >> .env
+          - echo export PRE_COMMIT_HOME=$BITBUCKET_CLONE_DIR/.pre-commit >> .env
         artifacts:
           - .env
-    - step: &compile-pipelines
-        name: Compile KFP pipelines
+
+    - step: &export-gcp-credentials
+        name: Export GCP credentials
         script:
           - source .env
-          - poetry config virtualenvs.in-project true
-          - poetry install --only cicd
-          - make compile pipeline=training
-          - make compile pipeline=deployment
-        caches:
-          - poetry
+          - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
         artifacts:
-          - training.json
-          - deployment.json
+          - key.json
+
+    - step: &config-pyenv
+        name: Configure Pyenv
+        script:
+          - source .env
+          - mkdir -p $PYTHON_BUILD_CACHE_PATH
+          - >-
+            if [[ -d $PYENV_ROOT && -n "$(ls -A $PYENV_ROOT)" ]]; then
+              echo "PYENV_ROOT folder exists and it's not empty"
+            else
+              apt update &&
+              apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev \
+                libreadline-dev libsqlite3-dev curl libncursesw5-dev xz-utils \
+                tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev &&
+              git clone https://github.com/pyenv/pyenv.git $PYENV_ROOT &&
+              export PATH="$PYENV_ROOT/bin:$PATH" &&
+              pyenv install $PYTHON_VERSION
+            fi
+        caches:
+          - pyenv
+
     - step: &run-unit-tests
         name: Run unit tests
         script:
-          - source .env
-          - poetry config virtualenvs.in-project true
-          - poetry install --only base,test,cicd
+          - *config-poetry
+          - poetry install
           - make pre-commit
           - make unit-tests
         caches:
           - poetry
+          - pyenv
+          - pre-commit
         artifacts:
+          - .env
           - unit-tests.xml
+
+    - step: &compile-pipelines
+        name: Compile KFP pipelines
+        script:
+          - *config-poetry
+          - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS --verbosity error
+          - make compile pipeline=training
+          - make compile pipeline=deployment
+          - mkdir -p output
+          - cp training.json deployment.json output
+          - gsutil cp -r output/ $VERTEX_PIPELINE_FILES_GCS_PATH
+        caches:
+          - poetry
+          - pyenv
+        artifacts:
+          - training.json
+          - deployment.json
 
 pipelines:
   default:
     - step: *set-env-vars
+    - step: *config-pyenv
     - step: *run-unit-tests
+    - step: *export-gcp-credentials
+    - step: *compile-pipelines
   branches:
     master:
     - step: *set-env-vars
+    - step: *config-pyenv
     - step: *run-unit-tests
+    - step: *export-gcp-credentials
     - parallel:
         steps:
           - step: *compile-pipelines
           - step:
-              name: Build base image
+              name: Push base image
               services:
                 - docker
               script:
-                - source .env
-                - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
-                - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS} --verbosity error
-                - gcloud auth configure-docker europe-west2-docker.pkg.dev --verbosity error
-                - >-
-                  docker build
-                  --build-arg BUILDKIT_INLINE_CACHE=1
-                  --cache-from ${IMAGE_NAME}:latest
-                  --tag ${IMAGE_NAME}
-                  --tag ${ARTIFACT_REGISTRY_REPO}/${BASE_IMAGE_NAME}:${BITBUCKET_COMMIT:0:7}
-                  -f ./containers/base/Dockerfile
-                  .
-                - docker push --all-tags ${ARTIFACT_REGISTRY_REPO}/${BASE_IMAGE_NAME}
+                - *config-poetry
+                - make push-image
     - step:
         name: Run training pipeline
         script:
-          - source .env
-          - echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS --verbosity error
-          - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS} --verbosity error
-          - poetry config virtualenvs.in-project true
-          - poetry install --only cicd
-          - make run pipeline=training enable-caching=false environment=prod
+          - *config-poetry
+          - make run pipeline=training

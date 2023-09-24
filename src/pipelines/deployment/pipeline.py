@@ -1,20 +1,22 @@
 import os
+import warnings
 from pathlib import Path
 
 from google_cloud_pipeline_components.v1.vertex_notification_email import (
     VertexNotificationEmailOp,
 )
 from kfp import compiler, dsl
+from kfp.dsl.types.type_utils import InconsistentTypeWarning
 
 from src.base.utilities import read_json
 from src.components.aiplatform import deploy_model, export_model, upload_model
 from src.components.dependencies import PIPELINE_IMAGE_NAME
-from src.components.helpers import merge_dicts
 
-COMMIT_TAG = os.getenv("CURRENT_TAG", "no_tag")
-COMMIT_HASH = os.getenv("CURRENT_COMMIT", "no_commit")
-PIPELINE_FILES_GCS_PATH = os.getenv("PIPELINE_FILES_GCS_PATH")
-PIPELINE_NAME = f"frauds-deployment-pipeline-{COMMIT_TAG}-{COMMIT_HASH}"
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=InconsistentTypeWarning, append=True)
+
+PIPELINE_TAG = os.environ.get("PIPELINE_TAG")
+PIPELINE_NAME = f"frauds-deployment-pipeline-{PIPELINE_TAG}"
 
 
 @dsl.pipeline(name=PIPELINE_NAME, description="Credit card frauds deployment Pipeline")
@@ -22,8 +24,6 @@ def deployment_pipeline(
     project_id: str,
     project_location: str,
     dataset_id: str,
-    dataset_location: str,
-    data_version: str,
     email_notification_recipients: list,
 ):
     """Credit card frauds classification deployment pipeline.
@@ -32,8 +32,6 @@ def deployment_pipeline(
         project_id (str): GCP project ID where the pipeline will run.
         project_location (str): GCP location whe the pipeline will run.
         dataset_id (str): Bigquery dataset used to store all the staging datasets.
-        dataset_location (str): Location of the BQ staging dataset.
-        data_version (str): Specific timestamp in `%Y%m%dT%H%M%S format.
         email_notification_recipients (list): List of email addresses that will be
             notified upon completion (whether successful or not) of the pipeline.
     """
@@ -56,15 +54,6 @@ def deployment_pipeline(
             .set_caching_options(True)
         )
 
-        merge_labels = (
-            merge_dicts(
-                dict1=export.outputs["labels"], dict2=dict(commit_tag=COMMIT_TAG)
-            )
-            .after(export)
-            .set_display_name("Add git tag to challenger labels")
-            .set_caching_options(True)
-        )
-
         replace = (
             upload_model(
                 model=export.outputs["model"],
@@ -74,7 +63,7 @@ def deployment_pipeline(
                 serving_container_params=serving_container_params,
                 project_id=project_id,
                 project_location=project_location,
-                labels=merge_labels.output,
+                labels=export.outputs["labels"],
                 description="Credit card frauds champion model",
                 is_default_version=True,
             )

@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 from typing import Tuple
 
@@ -6,33 +7,64 @@ import dotenv
 from loguru import logger
 
 
-def get_current_git_info() -> Tuple[str, str, str, bool]:
+def _clean_git_info(*args: str) -> tuple[str, ...]:
+    """Sanitise the git arguments passed as inputs.
+
+    Returns:
+        tuple[str, ...]: Inputs lower-cased and stripped of _:/. characters
+    """
+    return (re.sub(r"[_.:\/]", "-", a).lower() for a in args)
+
+
+def get_current_git_info() -> Tuple[bool, str, str, str, str, str]:
     """Return git branch, sha, and running environment of the repository.
 
     Returns:
-        str: Current branch
-        str: Current tag
-        str: Short SHA (7 digits) of the current commit
-        bool: Whether the code is executing on a local environment (True) or \
-            in a CI/CD pipeline (False)
+        bool: Whether the code is executing in a CI/CD pipeline (True) or \
+            in a local environment (False)
+        str: Current CI/CD deployment environment
+        str: Name of the git repository
+        str: Current git branch
+        str: Current git tag
+        str: Short SHA (7 digits) of the current git commit
     """
-    if os.environ.get("CI"):
-        # pick up sha and branch name if running from Bitbucket CI
-        sha = os.environ["BITBUCKET_COMMIT"][:7]
-        branch = os.environ.get("BITBUCKET_BRANCH", "master").replace("/", "-")
-        tag = os.environ.get("BITBUCKET_TAG", "no_tag")
-        is_local_env = False
-        logger.info(f"Running on Bitbucket with sha={sha}, branch={branch}.")
+    if os.environ.get("CI") and os.environ.get("BITBUCKET_BUILD_NUMBER"):
+        # Pick up git info if running from Bitbucket CI
+        env = os.environ.get("BITBUCKET_DEPLOYMENT_ENVIRONMENT", "prod")
+        sha = os.environ.get("BITBUCKET_COMMIT", "no-sha")[:7]
+        branch = os.environ.get("BITBUCKET_BRANCH", "master")
+        tag = os.environ.get("BITBUCKET_TAG", "no-tag")
+        repo_name = os.environ.get("BITBUCKET_REPO_SLUG")
+        is_cicd = True
+        logger.info(
+            f"Running on Bitbucket with sha={sha}, branch={branch}, tag={tag}, env={env}."
+        )
+    elif os.environ.get("CI") and os.environ.get("GITLAB_CI"):
+        # Pick up git info if running from Gitlab CI
+        env = os.environ.get("CI_ENVIRONMENT_SLUG", "prod")
+        sha = os.environ.get("CI_COMMIT_SHORT_SHA", "no-sha")
+        branch = os.environ.get("CI_COMMIT_BRANCH", "master")
+        tag = os.environ.get("CI_COMMIT_TAG", "no-tag")
+        repo_name = os.environ.get("CI_PROJECT_NAME")
+        is_cicd = True
+        logger.info(
+            f"Running on Gitlab with sha={sha}, branch={branch}, tag={tag}, env={env}."
+        )
     else:
+        # Pick up git info from local folder
         import git
 
         repo = git.Repo(search_parent_directories=True)
+        env = "dev"
         sha = repo.git.rev_parse(repo.head, short=7)
-        branch = str(repo.active_branch).replace("/", "-")
-        tag = "no_tag"
-        is_local_env = True
-        logger.info(f"Running locally with sha={sha}, branch={branch}.")
-    return branch, tag, sha, is_local_env
+        branch = str(repo.active_branch)
+        tag = "no-tag"
+        repo_name = repo.remotes.origin.url.split(".git")[0].split("/")[-1]
+        is_cicd = False
+        logger.info(
+            f"Running locally with sha={sha}, branch={branch}, tag={tag}, env={env}."
+        )
+    return is_cicd, env, repo_name, branch, tag, sha
 
 
 def set_env_variables(env_var_path: os.PathLike = ".env") -> None:
@@ -42,28 +74,51 @@ def set_env_variables(env_var_path: os.PathLike = ".env") -> None:
         env_var_path (os.PathLike, optional): Path of the .env file. \
             Defaults to ".env".
     """
-    git_branch, git_tag, commit_sha, is_local_env = get_current_git_info()
-    if is_local_env:
-        current_env_vars = dotenv.dotenv_values(env_var_path)
-    else:
+    is_cicd, env, repo_name, git_branch, git_tag, commit_sha = get_current_git_info()
+    repo_name, git_branch, git_tag, commit_sha = _clean_git_info(
+        repo_name, git_branch, git_tag, commit_sha
+    )
+    if is_cicd:
         current_env_vars = os.environ
-
-    development_stage = current_env_vars["DEVELOPMENT_STAGE"]
-
-    base_image_name = current_env_vars["BASE_IMAGE_NAME"]
-    container_repo = current_env_vars["ARTIFACT_REGISTRY_REPO"]
-
-    if git_branch == "master":
-        image_name = f"{container_repo}/{base_image_name}:latest"
     else:
-        image_name = f"{container_repo}/{base_image_name}:{git_branch}"
+        current_env_vars = dotenv.dotenv_values(env_var_path)
 
+    docker_repo = current_env_vars["DOCKER_REPO"]
+    project_id = current_env_vars["VERTEX_PROJECT_ID"]
+    project_location = current_env_vars["VERTEX_LOCATION"]
+
+    pipeline_root = f"gs://{project_id}/{repo_name}-pipeline-root"
+
+    if git_tag != "no-tag":
+        pipeline_tag = git_tag
+        image_tag = git_tag
+        pipeline_files_gcs_path = f"{pipeline_root}/{git_tag}"
+    else:
+        pipeline_tag = f"{git_branch}-{commit_sha}"
+        image_tag = git_branch
+        pipeline_files_gcs_path = f"{pipeline_root}/{git_branch}/{commit_sha}"
+
+    image_name = f"{project_location}-docker.pkg.dev/{project_id}/{docker_repo}"
+    image_name = f"{image_name}/{repo_name}:{image_tag}"
+
+    dotenv.set_key(
+        env_var_path, "VERTEX_PIPELINE_ROOT", pipeline_root, quote_mode="never"
+    )
+    dotenv.set_key(
+        env_var_path,
+        "VERTEX_PIPELINE_FILES_GCS_PATH",
+        pipeline_files_gcs_path,
+        quote_mode="never",
+    )
+    dotenv.set_key(env_var_path, "ENVIRONMENT", env, quote_mode="never")
+    dotenv.set_key(env_var_path, "PAYLOAD", f"{env}.json", quote_mode="never")
     dotenv.set_key(env_var_path, "IMAGE_NAME", image_name, quote_mode="never")
-    dotenv.set_key(env_var_path, "PIPELINE_TAG", development_stage, quote_mode="never")
+    dotenv.set_key(env_var_path, "PIPELINE_TAG", pipeline_tag, quote_mode="never")
+    dotenv.set_key(env_var_path, "IS_CICD", str(is_cicd), quote_mode="never")
+    dotenv.set_key(env_var_path, "REPO_NAME", repo_name, quote_mode="never")
     dotenv.set_key(env_var_path, "CURRENT_COMMIT", commit_sha, quote_mode="never")
     dotenv.set_key(env_var_path, "CURRENT_TAG", git_tag, quote_mode="never")
     dotenv.set_key(env_var_path, "CURRENT_BRANCH", git_branch, quote_mode="never")
-    dotenv.set_key(env_var_path, "IS_LOCAL_ENV", str(is_local_env), quote_mode="never")
 
 
 if __name__ == "__main__":

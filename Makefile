@@ -5,9 +5,7 @@ set-current-env-vars:
 
 -include set-current-env-vars
 -include .env
-enable-caching ?= ""
 data-version ?= ""
-environment ?= dev
 export
 
 help: ## Display this help screen
@@ -25,19 +23,27 @@ download-data: ## Download the dataset inside the `data` folder for local usage 
 		rm -rf data/credit-card-transactions/
 
 setup: ## Install all the required Python dependencies, download the data, and create a jupyter kernel for the project
-	@poetry install && \
+	@poetry env use ${PYENV_ROOT}/versions/$(shell cat .python-version)/bin/python && \
+		poetry install && \
 		$(MAKE) download-data && \
-		poetry run python -m ipykernel install --user --name="credit-card-frauds-venv"
+		poetry run python -m ipykernel install --user --name="${REPO_NAME}-venv"
 
 unit-tests: ## Runs unit tests for the source code
-	@poetry run python -m coverage run -m xmlrunner discover -b tests/ --output-file unit-tests.xml && \
+	@poetry run python -m coverage run -m xmlrunner discover -b tests/base --output-file unit-tests.xml && \
 		poetry run python -m coverage report -m
 
 upload-data: ## Upload the data from the local folder to Bigquery and create a schema where to save the table. Optionally specify data-version={data_version}
 	@poetry run python -m scripts.upload_data --data-version ${data-version}
 
 build-image: ## Build the Docker image locally
-	@docker build --tag ${IMAGE_NAME} -f ./containers/base/Dockerfile .
+	@docker build  \
+		-f ./containers/base/Dockerfile \
+		--build-arg BUILDKIT_INLINE_CACHE=1 \
+		--cache-from ${IMAGE_NAME} \
+		--tag ${IMAGE_NAME} \
+		--build-arg PYTHON_VERSION="$(shell cat .python-version)" \
+		--build-arg POETRY_VERSION="1.6.1" \
+		.
 
 push-image: ## Push the Docker image to the container registry. Must specify image=<base|bitbucket-cicd>
 	@$(MAKE) build-image && \
@@ -48,9 +54,9 @@ push-image: ## Push the Docker image to the container registry. Must specify ima
 compile: ## Compile the pipeline. Must specify pipeline=<training|prediction>
 	@poetry run python -m src.pipelines.${pipeline}.pipeline
 
-run: ## Run the pipeline. Must specify pipeline=<training|prediction>. Optionally specify environment=<dev|prod>, enable-caching=<true|false>, and data-version={data_version}
+run: ## Run the pipeline. Must specify pipeline=<training|prediction>. Optionally specify data-version={data_version}
 	@$(MAKE) compile && \
-		poetry run python -m src.trigger.main --payload=./src/pipelines/${pipeline}/payloads/${environment}.json --enable-caching=${enable-caching} --data-version=${data-version}
+		poetry run python -m src.trigger.main --payload=./src/pipelines/${pipeline}/payloads/${PAYLOAD} --data-version=${data-version}
 
 run-server-local: ## Run the REST API server
 	@$(MAKE) build-image && \

@@ -4,7 +4,7 @@ import json
 import os
 import re
 from distutils.util import strtobool
-from typing import List, Optional
+from typing import Optional
 
 from google.cloud import aiplatform
 from loguru import logger
@@ -41,7 +41,6 @@ def trigger_pipeline_from_payload(payload: dict) -> aiplatform.PipelineJob:
         aiplatform.PipelineJob: Pipeline job that is triggered as result
     """
     payload = convert_payload(payload)
-    logger.debug(f"enable_caching: {payload['attributes']['enable_caching']}.")
     logger.debug(f"data_version: {payload['data']['data_version']}.")
     env = get_env()
 
@@ -187,11 +186,11 @@ def get_env() -> dict:
     }
 
 
-def get_args(args: List[str] = None) -> argparse.Namespace:
+def get_args(args: list[str] = None) -> argparse.Namespace:
     """Get args from command line args.
 
     Args:
-        args (List[str], optional): Command line arguments submitted to
+        args (list[str], optional): Command line arguments submitted to
             src.trigger.main. Defaults to None.
 
     Returns:
@@ -199,14 +198,6 @@ def get_args(args: List[str] = None) -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--payload", type=str, help="Path to payload json file.")
-    parser.add_argument(
-        "--enable-caching",
-        type=str,
-        help=(
-            "Whether to enable caching of the pipeline components. "
-            "Must be one of 'true', 'false', 'null', or 'none'."
-        ),
-    )
     parser.add_argument(
         "--data-version",
         type=str,
@@ -235,14 +226,6 @@ def sandbox_run() -> Optional[aiplatform.PipelineJob]:
         else:
             logger.warning(
                 "Argument `data-version` is in the wrong format. It will be ignored."
-            )
-
-    if args.enable_caching and args.enable_caching != "":
-        if args.enable_caching.lower() in ["true", "false", "none", "null"]:
-            payload["attributes"]["enable_caching"] = args.enable_caching
-        else:
-            logger.warning(
-                "Argument `enable-caching` is in the wrong format. It will be ignored."
             )
 
     return trigger_pipeline_from_payload(payload)

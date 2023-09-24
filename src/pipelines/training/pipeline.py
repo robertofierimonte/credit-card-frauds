@@ -9,7 +9,7 @@ from google_cloud_pipeline_components.v1.vertex_notification_email import (
     VertexNotificationEmailOp,
 )
 from kfp import compiler, dsl
-from kfp.components.types.type_utils import InconsistentTypeWarning
+from kfp.dsl.types.type_utils import InconsistentTypeWarning
 
 from src.base.utilities import generate_query, read_json
 from src.components.aiplatform import export_model, lookup_model, upload_model
@@ -27,11 +27,14 @@ from src.components.model import (
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=InconsistentTypeWarning, append=True)
 
-DEVELOPMENT_STAGE = os.getenv("DEVELOPMENT_STAGE", "no_development_stage")
-BRANCH_NAME = os.getenv("CURRENT_BRANCH", "no_branch")
-COMMIT_HASH = os.getenv("CURRENT_COMMIT", "no_commit")
-PIPELINE_FILES_GCS_PATH = os.getenv("PIPELINE_FILES_GCS_PATH")
-PIPELINE_NAME = f"frauds-training-pipeline-{BRANCH_NAME}-{COMMIT_HASH}"
+PIPELINE_TAG = os.getenv("PIPELINE_TAG")
+VERTEX_PIPELINE_FILES_GCS_PATH = os.getenv("VERTEX_PIPELINE_FILES_GCS_PATH")
+PIPELINE_NAME = f"frauds-training-pipeline-{PIPELINE_TAG}"
+
+ENVIRONMENT = os.environ.get("ENVIRONMENT")
+BRANCH_NAME = os.environ.get("CURRENT_BRANCH")
+COMMIT_HASH = os.environ.get("CURRENT_COMMIT")
+RELEASE_TAG = os.environ.get("CURRENT_TAG")
 
 
 train_job = create_custom_training_job_op_from_component(
@@ -109,7 +112,7 @@ def training_pipeline(
         valid_set_table = f"{dataset_name}.validation"
         test_set_table = f"{dataset_name}.testing"
 
-        models_gcs_folder_path = f"{PIPELINE_FILES_GCS_PATH}/models/{COMMIT_HASH}"
+        models_gcs_folder_path = f"{VERTEX_PIPELINE_FILES_GCS_PATH}/models"
 
         preprocessing_query = generate_query(
             queries_folder / "q_preprocessing.sql",
@@ -210,6 +213,13 @@ def training_pipeline(
             .set_caching_options(True)
         )
 
+        model_labels = dict(
+            environment=ENVIRONMENT,
+            branch_name=BRANCH_NAME,
+            commit_hash=COMMIT_HASH,
+            release_tag=RELEASE_TAG,
+        )
+
         with dsl.ParallelFor(items=models, name="Train and evaluate models") as item:
             train = (
                 train_job(
@@ -251,11 +261,7 @@ def training_pipeline(
                     model=train.outputs["model"],
                     pipeline_timestamp=f"{current_timestamp.output}",
                     data_version=f"{data_version.output}",
-                    labels=dict(
-                        development_stage=DEVELOPMENT_STAGE,
-                        branch_name=BRANCH_NAME,
-                        commit_hash=COMMIT_HASH,
-                    ),
+                    labels=model_labels,
                     description="Credit card frauds model",
                     is_default_version=False,
                     version_description="Credit card frauds model",
@@ -315,11 +321,7 @@ def training_pipeline(
                 model=compare_candidates.outputs["best_model"],
                 pipeline_timestamp=f"{current_timestamp.output}",
                 data_version=f"{data_version.output}",
-                labels=dict(
-                    development_stage=DEVELOPMENT_STAGE,
-                    branch_name=BRANCH_NAME,
-                    commit_hash=COMMIT_HASH,
-                ),
+                labels=model_labels,
                 description="Credit card frauds challenger model",
                 is_default_version=True,
             )
