@@ -32,7 +32,7 @@ def get_current_git_info() -> Tuple[bool, str, str, str, str, str]:
         # Pick up git info if running from Bitbucket CI
         env = os.environ.get("BITBUCKET_DEPLOYMENT_ENVIRONMENT", "prod")
         sha = os.environ.get("BITBUCKET_COMMIT", "no-sha")[:7]
-        branch = os.environ.get("BITBUCKET_BRANCH", "master")
+        branch = os.environ.get("BITBUCKET_BRANCH", "no-branch")
         tag = os.environ.get("BITBUCKET_TAG", "no-tag")
         repo_name = os.environ.get("BITBUCKET_REPO_SLUG")
         is_cicd = True
@@ -43,12 +43,28 @@ def get_current_git_info() -> Tuple[bool, str, str, str, str, str]:
         # Pick up git info if running from Gitlab CI
         env = os.environ.get("CI_ENVIRONMENT_SLUG", "prod")
         sha = os.environ.get("CI_COMMIT_SHORT_SHA", "no-sha")
-        branch = os.environ.get("CI_COMMIT_BRANCH", "master")
+        branch = os.environ.get("CI_COMMIT_BRANCH", "no-branch")
         tag = os.environ.get("CI_COMMIT_TAG", "no-tag")
         repo_name = os.environ.get("CI_PROJECT_NAME")
         is_cicd = True
         logger.info(
             f"Running on Gitlab with sha={sha}, branch={branch}, tag={tag}, env={env}."
+        )
+    elif os.environ.get("CI") and os.environ.get("GITHUB_ACTIONS"):
+        # Pick up git info if running from Github Actions CI
+        env = os.environ.get("")
+        sha = os.environ.get("GITHUB_SHA", "no-sha")[:7]
+        ref_type = os.environ.get("GITHUB_REF_TYPE")
+        if ref_type == "branch":
+            branch = os.environ.get("GITHUB_REF_NAME")
+            tag = "no-tag"
+        elif ref_type == "tag":
+            branch = "no-branch"
+            tag = os.environ.get("GITHUB_REF_NAME")
+        repo_name = os.environ.get("GITHUB_REPOSITORY").split("/")[-1]
+        is_cicd = True
+        logger.info(
+            f"Running on Github with sha={sha}, branch={branch}, tag={tag}, env={env}."
         )
     else:
         # Pick up git info from local folder
@@ -87,7 +103,7 @@ def set_env_variables(env_var_path: os.PathLike = ".env") -> None:
     project_id = current_env_vars["VERTEX_PROJECT_ID"]
     project_location = current_env_vars["VERTEX_LOCATION"]
 
-    pipeline_root = f"gs://{project_id}/{repo_name}-pipeline-root"
+    pipeline_root = f"gs://{project_id}/{repo_name}"
 
     if git_tag != "no-tag":
         pipeline_tag = git_tag
@@ -125,6 +141,4 @@ if __name__ == "__main__":
     if not Path(".env").is_file():
         with open(".env", "w") as f:
             pass
-    logger.info("Setting up environment variables...")
     set_env_variables(".env")
-    logger.info("Done.")

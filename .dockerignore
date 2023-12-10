@@ -7,7 +7,6 @@ scripts/
 src/components/
 src/pipelines/
 src/trigger/
-src/utils/
 src/__version__.py
 __pycache__
 .pytest_cache

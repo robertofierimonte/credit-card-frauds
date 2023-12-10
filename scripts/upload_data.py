@@ -7,9 +7,15 @@ from pathlib import Path
 import holidays
 import numpy as np
 import pandas as pd
-from google.cloud import bigquery
+from google.cloud import bigquery, storage
 from google.cloud.exceptions import Conflict
 from loguru import logger
+
+# Get files to upload
+_DATA_FOLDER = Path(__file__).parent.parent / "data"
+_TRANSACTIONS_FILE = _DATA_FOLDER / "credit_card_transactions-ibm_v2.csv"
+_USERS_FILE = _DATA_FOLDER / "sd254_users.csv"
+_CARDS_FILE = _DATA_FOLDER / "sd254_cards.csv"
 
 if __name__ == "__main__":
     # Parse the arguments
@@ -42,16 +48,16 @@ if __name__ == "__main__":
     # Get project info and set dataset name
     project_name = os.environ.get("VERTEX_PROJECT_ID")
     project_location = os.environ.get("VERTEX_LOCATION")
-    dataset_name = f"{project_name}.credit_card_frauds_{data_version}"
 
     # Create the BQ client
-    client = bigquery.Client(project=project_name, location=project_location)
+    bq_client = bigquery.Client(project=project_name, location=project_location)
 
     # Create the dataset if doesn't exist
+    dataset_name = f"{project_name}.credit_card_frauds_{data_version}"
     dataset = bigquery.Dataset(dataset_name)
     dataset.location = project_location
     try:
-        dataset = client.create_dataset(dataset)
+        dataset = bq_client.create_dataset(dataset)
         logger.info(
             f"Created BQ dataset {dataset_name} in location {project_location}."
         )
@@ -71,22 +77,17 @@ if __name__ == "__main__":
             columns=["date", "name"],
         )
         table_id = f"{dataset_name}.holidays"
-        job = client.load_table_from_dataframe(
+        job = bq_client.load_table_from_dataframe(
             df_holidays, destination=table_id, job_config=job_config_holidays
         )
         job.result()
-        table = client.get_table(table_id)
+        table = bq_client.get_table(table_id)
         logger.info(
             f"Loaded {table.num_rows} rows and {len(table.schema)} columns "
             f"of US holidays data into {table_id}."
         )
 
         # Load the data into the dataset
-        data_folder = Path(__file__).parent.parent / "data"
-        transactions_file = data_folder / "credit_card_transactions-ibm_v2.csv"
-        users_file = data_folder / "sd254_users.csv"
-        cards_file = data_folder / "sd254_cards.csv"
-
         job_config_data = bigquery.LoadJobConfig(
             source_format=bigquery.SourceFormat.CSV,
             skip_leading_rows=1,
@@ -96,39 +97,39 @@ if __name__ == "__main__":
             source_format=bigquery.SourceFormat.CSV, autodetect=True
         )
 
-        with open(transactions_file, "rb") as f:
+        with open(_TRANSACTIONS_FILE, "rb") as f:
             table_id = f"{dataset_name}.transactions"
-            job = client.load_table_from_file(
+            job = bq_client.load_table_from_file(
                 f, destination=table_id, job_config=job_config_data
             )
             job.result()
-            table = client.get_table(table_id)
+            table = bq_client.get_table(table_id)
             logger.info(
                 f"Loaded {table.num_rows} rows and {len(table.schema)} columns "
                 f"of transactions data into {table_id}."
             )
 
-        with open(users_file, "rb") as f:
+        with open(_USERS_FILE, "rb") as f:
             df = pd.read_csv(f)
             df["User"] = df.index
             table_id = f"{dataset_name}.users"
-            job = client.load_table_from_dataframe(
+            job = bq_client.load_table_from_dataframe(
                 df, destination=table_id, job_config=job_config_pandas
             )
             job.result()
-            table = client.get_table(table_id)
+            table = bq_client.get_table(table_id)
             logger.info(
                 f"Loaded {table.num_rows} rows and {len(table.schema)} columns "
                 f"of users data into {table_id}."
             )
 
-        with open(cards_file, "rb") as f:
+        with open(_CARDS_FILE, "rb") as f:
             table_id = f"{dataset_name}.cards"
-            job = client.load_table_from_file(
+            job = bq_client.load_table_from_file(
                 f, destination=table_id, job_config=job_config_data
             )
             job.result()
-            table = client.get_table(table_id)
+            table = bq_client.get_table(table_id)
             logger.info(
                 f"Loaded {table.num_rows} rows and {len(table.schema)} columns "
                 f"of cards data into {table_id}."
@@ -141,3 +142,36 @@ if __name__ == "__main__":
             f"BQ dataset {dataset_name} in location {project_location} "
             "already exists. Skipping creation."
         )
+
+    # Create the GCS client
+    pipeline_root = os.environ.get("VERTEX_PIPELINE_ROOT")
+    pipeline_root = pipeline_root.replace("gs://", "")
+    gcs_path = f"{pipeline_root}/data/{data_version}"
+    gcs_client = storage.Client(project=project_name)
+
+    # Check if pipeline root bucket exist, otherwise create it.
+    bucket_name = pipeline_root.split("/")[0]
+    bucket = storage.Bucket(client=gcs_client, name=bucket_name)
+    if not bucket.exists():
+        bucket.create()
+        logger.info(
+            f"Created GCS bucket gs://{bucket.name} in location {project_location}."
+        )
+
+    # Check if transactions blob exists. If not, upload the transactions file.
+    transactions_blob = storage.Blob(f"{gcs_path}/transactions.csv", bucket=bucket)
+    if not transactions_blob.exists():
+        transactions_blob.upload_from_filename(_TRANSACTIONS_FILE)
+        logger.info(f"Uploaded transactions data to gs://{gcs_path}/transactions.csv .")
+
+    # Check if users blob exists. If not, upload the users file.
+    users_blob = storage.Blob(f"{gcs_path}/users.csv", bucket=bucket)
+    if not users_blob.exists():
+        users_blob.upload_from_filename(_USERS_FILE)
+        logger.info(f"Uploaded users data to gs://{gcs_path}/users.csv .")
+
+    # Check if cards blob exists. If not, upload the cards file.
+    cards_blob = storage.Blob(f"{gcs_path}/cards.csv", bucket=bucket)
+    if not cards_blob.exists():
+        cards_blob.upload_from_filename(_CARDS_FILE)
+        logger.info(f"Uploaded cards data to gs://{gcs_path}/cards.csv .")

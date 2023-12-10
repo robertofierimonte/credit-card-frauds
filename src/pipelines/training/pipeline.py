@@ -11,7 +11,7 @@ from google_cloud_pipeline_components.v1.vertex_notification_email import (
 from kfp import compiler, dsl
 from kfp.dsl.types.type_utils import InconsistentTypeWarning
 
-from src.base.utilities import generate_query, read_json
+from src.base.utilities import generate_query, read_yaml
 from src.components.aiplatform import export_model, lookup_model, upload_model
 from src.components.bigquery import bq_table_to_dataset, execute_query
 from src.components.data import get_data_version
@@ -76,7 +76,7 @@ def training_pipeline(
 
     queries_folder = Path(__file__).parent / "queries"
     config_folder = Path(__file__).parent.parent / "configuration"
-    config_params = read_json(config_folder / "params.json")
+    config_params = read_yaml(config_folder / "params.yaml")
 
     models = config_params["models"]
     features = "`" + "`,\n`".join(f for f in config_params["features"]) + "`"

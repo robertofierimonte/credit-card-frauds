@@ -25,8 +25,8 @@ def calculate_precision_top_k(
     """Calculate the Precision-top-k (P@k) metric.
 
     Args:
-        y (numpy.array): True classification labels
-        prediction_probabilities (numpy.array): Predicted fraud probabilities
+        y (np.ndarray): True classification labels
+        prediction_probabilities (np.ndarray): Predicted fraud probabilities
             for each transaction in y
         k (int): Optional, default value is 200. Number of samples for measuring
             precision, where samples are the k highest rated transactions for
@@ -53,10 +53,10 @@ def evaluate_model(
     """Evaluates metrics for a given classifier and dataset.
 
     Args:
-        trained-classifier: Any trained classification model with sklearn type
+        trained-classifier (ClassifierMixin): Any trained classification model with
             "predict" and "predict_proba" methods.
-        X (numpy.array): Input features to the model.
-        y (numpy.array): Target data.
+        X (np.ndarray): Input features to the model.
+        y (np.ndarray): Target data.
 
     Returns:
         dict: Dictionary containing all evaluation results on the data.
@@ -70,14 +70,14 @@ def evaluate_model(
             precision_top_k (float): Precision evaluated on the 200 samples with the
                 highest predicted probability.
             precision_recall_curve: tuple with 3 elements:
-                numpy.array: Precision score for different decision thresholds
+                np.ndarray: Precision score for different decision thresholds
                     on the data.
-                numpy.array: Recall score for different decision thresholds
+                np.ndarray: Recall score for different decision thresholds
                     on the data.
-                numpy.array: All the decision thresholds corresponding
+                np.ndarray: All the decision thresholds corresponding
                     to "precision" and "recall".
-        numpy.array: Model classification for each entry in the data
-        numpy.array: Model prediction for the probability of class 1 (fraud)
+        np.ndarray: Model classification for each entry in the data
+        np.ndarray: Model prediction for the probability of class 1 (fraud)
             for each entry in the data
     """
     # Evaluate test error
@@ -143,10 +143,11 @@ def train_model(
     Args:
         classifier: any sklearn-type classifier with fit, predict and
             predict_proba methods.
-        X_train (numpy.array): training data features.
-        y_train (numpy.array): training data target variable.
-        X_valid (numpy.array, optional): validation data features. Defaults to None.
-        y_valid (numpy.array, optional): validation data target variable.
+        X_train (np.ndarray): training data features.
+        y_train (np.ndarray): training data target variable.
+        X_valid (Optional[np.ndarray], optional): validation data features.
+            Defaults to None.
+        y_valid (Optional[np.ndarray], optional): validation data target variable.
             Defaults to None.
         data_standardization (str): Optional, default "standard". Used to select the
             mode for data scaling. Options: "standard", "min_max", "none".

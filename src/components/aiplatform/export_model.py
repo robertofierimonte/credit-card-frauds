@@ -2,13 +2,10 @@ from typing import NamedTuple
 
 from kfp.dsl import Model, Output, component
 
-from src.components.dependencies import GOOGLE_CLOUD_AIPLATFORM, LOGURU, PYTHON
+from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PYTHON,
-    packages_to_install=[GOOGLE_CLOUD_AIPLATFORM, LOGURU],
-)
+@component(base_image=PIPELINE_IMAGE_NAME)
 def export_model(
     model_id: str,
     project_id: str,
@@ -34,6 +31,10 @@ def export_model(
     """
     from google.cloud.aiplatform import Model
     from loguru import logger
+
+    from src.utils.logging import setup_logger
+
+    setup_logger()
 
     model_to_be_exported = Model(
         model_name=model_id,

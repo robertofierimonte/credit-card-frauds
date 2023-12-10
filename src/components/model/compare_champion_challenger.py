@@ -5,9 +5,7 @@ from kfp.dsl import Dataset, Input, Model, component
 from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PIPELINE_IMAGE_NAME,
-)
+@component(base_image=PIPELINE_IMAGE_NAME)
 def compare_champion_challenger(
     test_data: Input[Dataset],
     target_column: str,
@@ -45,6 +43,9 @@ def compare_champion_challenger(
     from loguru import logger
 
     from src.base.model import evaluate_model
+    from src.utils.logging import setup_logger
+
+    setup_logger()
 
     champion = joblib.load(champion_model.path)
     logger.info("Loaded champion model.")

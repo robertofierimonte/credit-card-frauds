@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 import joblib
 import pandas as pd
@@ -9,14 +10,12 @@ from loguru import logger
 
 from src.serving_api.models import Data, Prediction
 
-app = FastAPI(title="Credit Card Frauds Prediction Model")
-
 global_items = {}
 model_file = "model.joblib"
 
 
-@app.on_event("startup")
-def startup() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     path = os.environ.get("AIP_STORAGE_URI", "/tmp/model")
     path = os.path.join(path, model_file)
     logger.info(f"Loading model file from {path}.")
@@ -32,6 +31,10 @@ def startup() -> None:
 
     global_items["model"] = joblib.load(dest_file_name)
     logger.info("Successfully loaded model.")
+    yield
+
+
+app = FastAPI(title="Credit Card Frauds Prediction Model", lifespan=lifespan)
 
 
 @app.get("/health")

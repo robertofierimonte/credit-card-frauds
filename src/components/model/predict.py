@@ -1,12 +1,9 @@
 from kfp.dsl import Dataset, Input, Model, Output, component
 
-from src.components.dependencies import JOBLIB, PANDAS, PYTHON, SCIKIT_LEARN
+from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PYTHON,
-    packages_to_install=[SCIKIT_LEARN, PANDAS, JOBLIB],
-)
+@component(base_image=PIPELINE_IMAGE_NAME)
 def predict_model(
     input_data: Input[Dataset],
     model: Input[Model],
@@ -23,6 +20,10 @@ def predict_model(
     """
     import joblib
     import pandas as pd
+
+    from src.utils.logging import setup_logger
+
+    setup_logger()
 
     dtc = joblib.load(model.path)
 

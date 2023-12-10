@@ -1,16 +1,9 @@
 from kfp.dsl import Artifact, Dataset, Input, Metrics, Model, Output, component
 
-from src.components.dependencies import (
-    GOOGLE_CLOUD_STORAGE,
-    MATPLOTLIB,
-    PIPELINE_IMAGE_NAME,
-)
+from src.components.dependencies import MATPLOTLIB, PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PIPELINE_IMAGE_NAME,
-    packages_to_install=[GOOGLE_CLOUD_STORAGE, MATPLOTLIB],
-)
+@component(base_image=PIPELINE_IMAGE_NAME, packages_to_install=[MATPLOTLIB])
 def train_evaluate_model(
     training_data: Input[Dataset],
     validation_data: Input[Dataset],
@@ -73,6 +66,9 @@ def train_evaluate_model(
 
     from src.base.model import evaluate_model, train_model
     from src.base.visualisation import plot_precision_recall_curve
+    from src.utils.logging import setup_logger
+
+    setup_logger()
 
     df_train = pd.read_parquet(training_data.path)
     df_train = df_train.drop(columns=["transaction_id"])

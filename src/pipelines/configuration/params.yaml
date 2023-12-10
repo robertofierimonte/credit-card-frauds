@@ -1,0 +1,115 @@
+---
+models:
+  - logistic_regression
+  - sgd_classifier
+  - random_forest
+  - xgboost
+  - lightgbm
+data_processing_args:
+  data_sampling: rose
+  rose_shrinkage: 0.5
+  rose_upsampled_minority_proportion: 0.3
+models_params:
+  logistic_regression:
+    max_iter: 500
+  sgd_classifier:
+    loss: modified_huber
+  random_forest:
+    n_jobs: -1
+    class_weight: balanced
+    bootstrap: true
+    max_samples: 0.3
+    max_depth: 6
+  xgboost:
+    eval_metric: logloss
+    scale_pos_weight: 10
+    verbosity: 0
+  lightgbm:
+    verbosity: 0
+    is_unbalance: true
+fit_args:
+  xgboost:
+    verbose: 0
+fraud_delay_days: 7
+features:
+  - amount
+  - has_chip
+  - gender
+  - online_transaction
+  - amex
+  - discover
+  - mastercard
+  - visa
+  - credit
+  - debit
+  - debit_prepaid
+  - mcc_mean_encoding
+  - card_present_transaction
+  - fraud_rolling_mean_30_days
+  - fraud_rolling_mean_60_days
+  - fraud_rolling_mean_365_days
+  - fraud_rolling_mean_2_years
+  - fraud_online_rolling_mean_30_days
+  - fraud_online_rolling_mean_60_days
+  - fraud_online_rolling_mean_365_days
+  - fraud_online_rolling_mean_2_years
+  - fraud_card_present_rolling_mean_30_days
+  - fraud_card_present_rolling_mean_60_days
+  - fraud_card_present_rolling_mean_365_days
+  - fraud_card_present_rolling_mean_2_years
+  - fraud_rolling_30_days_relative_to_365_days
+  - fraud_rolling_30_days_relative_to_2_years
+  - fraud_rolling_60_days_relative_to_365_days
+  - fraud_rolling_60_days_relative_to_2_years
+  - fraud_online_rolling_30_days_relative_to_365_days
+  - fraud_online_rolling_30_days_relative_to_2_years
+  - fraud_online_rolling_60_days_relative_to_365_days
+  - fraud_online_rolling_60_days_relative_to_2_years
+  - fraud_card_present_rolling_30_days_relative_to_365_days
+  - fraud_card_present_rolling_30_days_relative_to_2_years
+  - fraud_card_present_rolling_60_days_relative_to_365_days
+  - fraud_card_present_rolling_60_days_relative_to_2_years
+  - fraud_online_rolling_30_days_relative_to_all_frauds
+  - fraud_card_present_rolling_30_days_relative_to_all_frauds
+  - fraud_online_rolling_60_days_relative_to_all_frauds
+  - fraud_card_present_rolling_60_days_relative_to_all_frauds
+  - fraud_online_rolling_365_days_relative_to_all_frauds
+  - fraud_card_present_rolling_365_days_relative_to_all_frauds
+  - fraud_online_rolling_2_years_relative_to_all_frauds
+  - fraud_card_present_rolling_2_years_relative_to_all_frauds
+  - hour_sin
+  - hour_cos
+  - month_sin
+  - month_cos
+  - day_of_week_sin
+  - day_of_week_cos
+  - is_holiday
+  - weekend
+  - is_2015_or_later
+  - mean_amount
+  - mean_amount_last_year
+  - mean_amount_last_30_days
+  - mean_amount_last_7_days
+  - mean_amount_last_2_days
+  - mean_amount_last_1_days
+  - mean_amount_last_7_days_relative_to_last_year
+  - mean_amount_last_2_days_relative_to_last_year
+  - mean_amount_last_1_days_relative_to_last_year
+  - mean_amount_last_7_days_relative_to_last_30_days
+  - mean_amount_last_2_days_relative_to_last_30_days
+  - mean_amount_last_1_days_relative_to_last_30_days
+  - transaction_count
+  - days_since_first_transaction
+  - transaction_frequency_all
+  - transaction_frequency_last_year
+  - transaction_frequency_last_30_days
+  - transaction_frequency_last_7_days
+  - transaction_frequency_last_2_days
+  - transaction_frequency_last_1_days
+  - 1_days_transaction_frequency_relative_to_last_30_days
+  - 1_days_transaction_frequency_relative_to_last_year
+  - 2_days_transaction_frequency_relative_to_last_30_days
+  - 2_days_transaction_frequency_relative_to_last_year
+  - 7_days_transaction_frequency_relative_to_last_30_days
+  - 7_days_transaction_frequency_relative_to_last_year
+target_column: is_fraud

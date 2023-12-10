@@ -1,3 +1,4 @@
+/* Use older data for training. Use APPROX_QUANTILES otherwise BQ runs out of memory.*/
 DECLARE train_limit INT64 DEFAULT (
     SELECT APPROX_QUANTILES(datetime_unix_seconds, 100)[OFFSET(CAST(100 * (1 - {{ valid_size }} - {{ test_size }}) AS INT))] train_limit
     FROM `{{ source_table }}`
@@ -13,6 +14,7 @@ CREATE OR REPLACE TABLE `{{ training_table }}` AS (
 )
 ;
 
+/* Randomly split newer data into test and validation sets. */
 CREATE TEMP TABLE validation_testing AS (
     SELECT t.* EXCEPT(datetime_unix_seconds)
 

@@ -23,21 +23,31 @@ download-data: ## Download the dataset inside the `data` folder for local usage 
 		rm -rf data/credit-card-transactions/
 
 setup: ## Install all the required Python dependencies, download the data, and create a jupyter kernel for the project
-	@poetry env use ${PYENV_ROOT}/versions/$(shell cat .python-version)/bin/python && \
-		poetry install && \
+	@poetry env use $(shell cat .python-version) && \
+		poetry install --without beam && \
 		$(MAKE) download-data && \
-		poetry run python -m ipykernel install --user --name="${REPO_NAME}-venv"
+		poetry run python -m ipykernel install --user --name="credit-card-frauds-venv"
 
-unit-tests: ## Runs unit tests for the source code
-	@poetry run python -m coverage run -m xmlrunner discover -b tests/base --output-file unit-tests.xml && \
-		poetry run python -m coverage report -m
+unit-tests: ## Runs unit tests for pipeline components
+	@poetry run python -m pytest tests/base --junitxml=unit-base.xml
+
+unit-components-tests: ## Runs unit tests for base source code and pipeline components
+	@poetry run python -m pytest tests/components --junitxml=unit-components.xml
+
+trigger-tests: ## Runs unit tests for the pipeline trigger code
+	@unset GOOGLE_APPLICATION_CREDENTIALS VERTEX_TRIGGER_MODE && \
+    poetry run python -m pytest tests/trigger --junitxml=trigger.xml
+
+e2e-tests: ## Compile pipeline, trigger pipeline and perform end-to-end (E2E) pipeline tests. Must specify pipeline=<training|prediction>
+	@$(MAKE) compile && \
+	poetry run python -m pytest tests/pipelines/$(pipeline) --junitxml=$(pipeline).xml
 
 upload-data: ## Upload the data from the local folder to Bigquery and create a schema where to save the table. Optionally specify data-version={data_version}
 	@poetry run python -m scripts.upload_data --data-version ${data-version}
 
 build-image: ## Build the Docker image locally
 	@docker build  \
-		-f ./containers/base/Dockerfile \
+		-f ./containers/Dockerfile \
 		--build-arg BUILDKIT_INLINE_CACHE=1 \
 		--cache-from ${IMAGE_NAME} \
 		--tag ${IMAGE_NAME} \
@@ -47,8 +57,8 @@ build-image: ## Build the Docker image locally
 
 push-image: ## Push the Docker image to the container registry. Must specify image=<base|bitbucket-cicd>
 	@$(MAKE) build-image && \
-		gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS} --verbosity error && \
-		gcloud auth configure-docker ${VERTEX_LOCATION}-docker.pkg.dev --verbosity error && \
+		gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS} --quiet --verbosity error && \
+		gcloud auth configure-docker ${VERTEX_LOCATION}-docker.pkg.dev --quiet --verbosity error && \
 		docker push ${IMAGE_NAME}
 
 compile: ## Compile the pipeline. Must specify pipeline=<training|prediction>
@@ -67,4 +77,53 @@ test-api-health: ## Check that the API is healthy
 	@curl -X GET http://localhost:8080/health
 
 test-api-predict: ## Send a prediction request to the API. Must specify a file name with payload=<payload>
-	@curl -X POST -H 'accept: application/json' -H 'Content-Type: application/json' -d @${payload} http://localhost:8080/predict
+	@curl -X POST -H 'accept: application/json' -H 'Content-Type: application/json' -d @${payload-file} http://localhost:8080/predict
+
+tf-init-validate: ## Runs terraform init and validate
+	@export GOOGLE_APPLICATION_CREDENTIALS=${TF_GOOGLE_APPLICATION_CREDENTIALS} && \
+    cd terraform && \
+    rm -rf .terraform && \
+    terraform init -backend-config="prefix=${VERTEX_PROJECT_ID}-triggers" -backend-config="bucket=${VERTEX_PROJECT_ID}-tfstates" && \
+    terraform validate
+
+tf-plan: ## Runs terraform plan
+	@$(MAKE) tf-init-validate && \
+    echo \
+    { \
+      \"cloud_run_config\": { \
+        \"image\": \"${PIPELINE_IMAGE_NAME}\", \
+        \"command\": [\"gunicorn\"], \
+        \"args\": [\"src.trigger.app:app\", \"--config=./src/trigger/config.py\"], \
+        \"container_port\": \"8080\", \
+        \"env_vars\": { \
+          \"VERTEX_LOCATION\": \"${VERTEX_LOCATION}\", \
+          \"VERTEX_PROJECT_ID\": \"${VERTEX_PROJECT_ID}\", \
+          \"VERTEX_SA_EMAIL\": \"${VERTEX_SA_EMAIL}\", \
+          \"PIPELINE_TAG\": \"${PIPELINE_TAG}\", \
+          \"VERTEX_PIPELINE_FILES_GCS_PATH\": \"${VERTEX_PIPELINE_FILES_GCS_PATH}\", \
+          \"VERTEX_PIPELINE_ROOT\": \"${VERTEX_PIPELINE_ROOT}\", \
+          \"TEMPLATE_BASE_PATH\": \"${VERTEX_PIPELINE_FILES_GCS_PATH}\" \
+        }, \
+        \"service_account\": \"terraform-deploy-sa@${VERTEX_PROJECT_ID}.iam.gserviceaccount.com\", \
+        \"vpc_connector\": \"cloud-function-connector\" \
+      } \
+    } > terraform/cloud_run_config.json && \
+    cd terraform && \
+    terraform plan \
+      -out=output.tfplan \
+      -var-file=project_configuration/${VERTEX_PROJECT_ID}/variables.auto.tfvars \
+      -var-file=cloud_run_config.json
+
+tf-apply: ## Runs terraform apply
+	@$(MAKE) tf-plan && \
+    cd terraform && \
+    terraform apply -input=false output.tfplan
+
+tf-destroy: ## Runs terraform destroy
+	@export GOOGLE_APPLICATION_CREDENTIALS=${TF_GOOGLE_APPLICATION_CREDENTIALS} && \
+    cd terraform && \
+    terraform destroy -auto-approve -input=false \
+    -var-file=project_configuration/${VERTEX_PROJECT_ID}/variables.auto.tfvars
+
+release: ## Create a new model release. Must specify version={release_version}
+	@echo 'AAA'

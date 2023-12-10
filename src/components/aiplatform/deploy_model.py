@@ -1,9 +1,9 @@
 from kfp.dsl import component
 
-from src.components.dependencies import GOOGLE_CLOUD_AIPLATFORM, LOGURU, PYTHON
+from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(base_image=PYTHON, packages_to_install=[GOOGLE_CLOUD_AIPLATFORM, LOGURU])
+@component(base_image=PIPELINE_IMAGE_NAME)
 def deploy_model(
     model_id: str,
     endpoint_id: str,
@@ -14,6 +14,7 @@ def deploy_model(
     endpoint_display_name: str = None,
     model_label: str = None,
     monitoring: bool = True,
+    monitoring_config: dict = None,
 ) -> None:
     """Deploy a ML model from the Vertex model registry to an online endpoint.
 
@@ -37,12 +38,17 @@ def deploy_model(
     """
     from google.api_core.exceptions import NotFound
     from google.cloud import aiplatform
-    from google.cloud.aiplatform import (  # model_monitoring,
+    from google.cloud.aiplatform import (
         Endpoint,
         Model,
         ModelDeploymentMonitoringJob,
+        model_monitoring,
     )
     from loguru import logger
+
+    from src.utils.logging import setup_logger
+
+    setup_logger()
 
     aiplatform.init(project=project_id, location=project_location)
 
@@ -66,7 +72,7 @@ def deploy_model(
 
     try:
         endpoint = Endpoint(endpoint_name=endpoint_id)
-        logger.info(f"Found existing endpoint {endpoint_id}.")
+        logger.info(f"Found existing endpoint {endpoint.name}, ID {endpoint_id}.")
         endpoint.undeploy_all()
         logger.info("Undeployed all models from existing endpoint.")
 
@@ -84,7 +90,48 @@ def deploy_model(
                 f"bq://{project_id}.{dataset_id}.endpoint_logging"
             ),
         )
-        logger.info(f"Created endpoint {endpoint_display_name}.")
+        logger.info(f"Created endpoint {endpoint_display_name}, ID: {endpoint_id}.")
 
     model.deploy(endpoint=endpoint, deployed_model_display_name=model_display_name)
-    logger.info(f"Deployed model {model_id} to endpoint {endpoint_id}.")
+    logger.info(f"Deployed model {model_id} to endpoint {endpoint_display_name}.")
+
+    if monitoring is True:
+        skew_config = model_monitoring.SkewDetectionConfig(
+            data_source=...,
+            skew_thresholds=...,
+            attribute_skew_thresholds=...,
+            target_field=...,
+        )
+        drift_config = model_monitoring.DriftDetectionConfig(
+            drift_thresholds=..., attribute_drift_thresholds=...
+        )
+        explanation_config = model_monitoring.ExplanationConfig()
+        objective_config = model_monitoring.ObjectiveConfig(
+            skew_detection_config=skew_config,
+            drift_detection_config=drift_config,
+            explanation_config=explanation_config,
+        )
+
+        # Create sampling configuration.
+        sampling_config = model_monitoring.RandomSampleConfig(sample_rate=1.0)
+
+        # Create schedule configuration.
+        schedule_config = model_monitoring.ScheduleConfig(monitor_interval=6)
+
+        # Create alerting configuration.
+        alerting_config = model_monitoring.EmailAlertConfig(
+            user_emails=None, enable_logging=True
+        )
+
+        # Create the monitoring job.
+        job = aiplatform.ModelDeploymentMonitoringJob.create(
+            display_name=f"monitoring-job-{endpoint_display_name}",
+            logging_sampling_strategy=sampling_config,
+            schedule_config=schedule_config,
+            alert_config=alerting_config,
+            objective_configs=objective_config,
+            project=project_id,
+            location=project_location,
+            endpoint=endpoint,
+        )
+        logger.info(f"Enabled model monitoring for endpoint {endpoint_display_name}.")

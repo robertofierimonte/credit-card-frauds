@@ -5,9 +5,7 @@ from kfp.dsl import Dataset, Input, Model, Output, component
 from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PIPELINE_IMAGE_NAME,
-)
+@component(base_image=PIPELINE_IMAGE_NAME)
 def compare_models(
     test_data: Input[Dataset],
     target_column: str,
@@ -39,6 +37,9 @@ def compare_models(
     from loguru import logger
 
     from src.base.model import evaluate_model
+    from src.utils.logging import setup_logger
+
+    setup_logger()
 
     candidates = [joblib.load(m.path) for m in models]
     logger.debug(f"Len(candidates): {len(candidates)}")

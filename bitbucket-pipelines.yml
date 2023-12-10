@@ -130,3 +130,9 @@ pipelines:
         script:
           - *config-poetry
           - make run pipeline=training
+    - step:
+        name: Run deployment pipeline
+        script:
+          - *config-poetry
+          - make run pipeline=deployment
+        trigger: manual

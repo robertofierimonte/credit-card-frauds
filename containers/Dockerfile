@@ -24,13 +24,13 @@ RUN mkdir -p /opt/app
 WORKDIR /opt/app
 
 # Install poetry
-RUN pip install --upgrade pip && \
-    pip install poetry=="${POETRY_VERSION}"
+RUN pip install --upgrade pip --quiet && \
+    pip install poetry=="${POETRY_VERSION}" --quiet
 
 # Install dependencies
 COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false \
-    && poetry install --only base --no-root --no-interaction --no-ansi
+    && poetry install --only main --no-root --no-interaction --no-ansi
 
 # Copy the source code
 COPY src /opt/app/src

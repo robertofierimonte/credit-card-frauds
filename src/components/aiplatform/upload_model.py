@@ -1,12 +1,9 @@
 from kfp.dsl import Input, Model, component
 
-from src.components.dependencies import GOOGLE_CLOUD_AIPLATFORM, LOGURU, PYTHON
+from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PYTHON,
-    packages_to_install=[GOOGLE_CLOUD_AIPLATFORM, LOGURU],
-)
+@component(base_image=PIPELINE_IMAGE_NAME)
 def upload_model(
     model_id: str,
     display_name: str,
@@ -55,6 +52,10 @@ def upload_model(
     from google.api_core.exceptions import NotFound
     from google.cloud.aiplatform import Model
     from loguru import logger
+
+    from src.utils.logging import setup_logger
+
+    setup_logger()
 
     # The URI expects a folder containing the model binaries
     model_uri = model.uri.rsplit("/", 1)[0]

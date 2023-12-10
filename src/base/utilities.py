@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import yaml
 from jinja2 import Template
 
 
@@ -21,7 +22,7 @@ def generate_query(input_file: Path, **replacements) -> str:
 
 
 def read_json(input_file: Path) -> dict:
-    """Read input json file and return a dictionary.
+    """Read input JSON file and return a dictionary.
 
     Args:
         input_file (Path): Input file to read.
@@ -31,3 +32,16 @@ def read_json(input_file: Path) -> dict:
     """
     with open(input_file, "r") as f:
         return json.load(f)
+
+
+def read_yaml(input_file: Path) -> dict:
+    """Read input YAML file and return a dictionary.
+
+    Args:
+        input_file (Path): Input file to read.
+
+    Returns:
+        dict: json dictionary
+    """
+    with open(input_file, "r") as f:
+        return yaml.safe_load(f)

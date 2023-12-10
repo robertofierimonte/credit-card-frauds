@@ -1,12 +1,9 @@
 from kfp.dsl import component
 
-from src.components.dependencies import GOOGLE_CLOUD_BIGQUERY, LOGURU, PYTHON
+from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PYTHON,
-    packages_to_install=[GOOGLE_CLOUD_BIGQUERY, LOGURU],
-)
+@component(base_image=PIPELINE_IMAGE_NAME)
 def execute_query(
     query: str,
     bq_client_project_id: str,
@@ -30,6 +27,10 @@ def execute_query(
     from google.cloud import bigquery
     from google.cloud.exceptions import GoogleCloudError
     from loguru import logger
+
+    from src.utils.logging import setup_logger
+
+    setup_logger()
 
     job_config = bigquery.QueryJobConfig(**query_job_config)
 

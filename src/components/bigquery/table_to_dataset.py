@@ -2,13 +2,10 @@ from typing import NamedTuple, Optional
 
 from kfp.dsl import Dataset, Output, component
 
-from src.components.dependencies import GOOGLE_CLOUD_BIGQUERY, LOGURU, PYTHON
+from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PYTHON,
-    packages_to_install=[GOOGLE_CLOUD_BIGQUERY, LOGURU],
-)
+@component(base_image=PIPELINE_IMAGE_NAME)
 def bq_table_to_dataset(
     bq_client_project_id: str,
     source_project_id: str,
@@ -55,6 +52,10 @@ def bq_table_to_dataset(
     from google.cloud import bigquery
     from google.cloud.exceptions import GoogleCloudError
     from loguru import logger
+
+    from src.utils.logging import setup_logger
+
+    setup_logger()
 
     # Set uri of output dataset if destination_gcs_uri is provided
     if destination_gcs_uri:
