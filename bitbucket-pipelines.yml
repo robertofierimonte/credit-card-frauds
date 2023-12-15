@@ -1,3 +1,4 @@
+---
 image: robertofierimonte/data-science-base-image:latest
 
 definitions:
@@ -111,28 +112,28 @@ pipelines:
     - step: *compile-pipelines
   branches:
     master:
-    - step: *set-env-vars
-    - step: *config-pyenv
-    - step: *run-unit-tests
-    - step: *export-gcp-credentials
-    - parallel:
-        steps:
-          - step: *compile-pipelines
-          - step:
-              name: Push base image
-              services:
-                - docker
-              script:
-                - *config-poetry
-                - make push-image
-    - step:
-        name: Run training pipeline
-        script:
-          - *config-poetry
-          - make run pipeline=training
-    - step:
-        name: Run deployment pipeline
-        script:
-          - *config-poetry
-          - make run pipeline=deployment
-        trigger: manual
+      - step: *set-env-vars
+      - step: *config-pyenv
+      - step: *run-unit-tests
+      - step: *export-gcp-credentials
+      - parallel:
+          steps:
+            - step: *compile-pipelines
+            - step:
+                name: Push base image
+                services:
+                  - docker
+                script:
+                  - *config-poetry
+                  - make push-image
+      - step:
+          name: Run training pipeline
+          script:
+            - *config-poetry
+            - make run pipeline=training
+      - step:
+          name: Run deployment pipeline
+          script:
+            - *config-poetry
+            - make run pipeline=deployment
+          trigger: manual

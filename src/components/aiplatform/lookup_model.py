@@ -9,7 +9,7 @@ def lookup_model(
     project_id: str,
     project_location: str,
     model: Output[Model],
-    model_label: str = None,
+    model_version: str = None,
     fail_on_model_not_found: bool = False,
 ) -> str:
     """Fetch a Vertex AI model from the model registry given its name and version.
@@ -20,7 +20,7 @@ def lookup_model(
         project_location (str): Location where the model is stored.
         model (Output[Model]): The fetched model as a KFP Model object. This
             parameter will be passed automatically by the orchestrator.
-        model_label (str, optional): Version alias of the model. Defaults to None.
+        model_version (str, optional): Version alias of the model. Defaults to None.
         fail_on_model_not_found (bool, optional): If set to True, raise an error
             if the model is not found. Defaults to False.
 
@@ -46,7 +46,7 @@ def lookup_model(
             model_name=model_name,
             project=project_id,
             location=project_location,
-            version=model_label,
+            version=model_version,
         )
         model_resource_name = target_model.resource_name
         logger.info(

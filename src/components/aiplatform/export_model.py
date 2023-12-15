@@ -11,7 +11,7 @@ def export_model(
     project_id: str,
     project_location: str,
     model: Output[Model],
-    model_label: str = None,
+    model_version: str = None,
     model_file_name: str = None,
 ) -> NamedTuple("Outputs", [("labels", dict)]):
     """Export a Vertex AI model from the model registry to GCS.
@@ -22,7 +22,7 @@ def export_model(
         project_location (str): Location where the model is stored.
         model (Output[Model]): The exported model as a KFP Model object. This
             parameter will be passed automatically by the orchestrator.
-        model_label (str, optional): Version alias of the model. Defaults to None.
+        model_version (str, optional): Version alias of the model. Defaults to None.
         model_file_name (str, optional): File name of the model inside the model folder.
             Defaults to None.
 
@@ -40,7 +40,7 @@ def export_model(
         model_name=model_id,
         project=project_id,
         location=project_location,
-        version=model_label,
+        version=model_version,
     )
 
     logger.debug(f"URI: {model.uri}.")

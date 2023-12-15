@@ -33,6 +33,10 @@ def get_current_time(
 
     from loguru import logger
 
+    from src.utils.logging import setup_logger
+
+    setup_logger()
+
     if not timestamp:
         dt = datetime.now(timezone.utc) - timedelta(days=subtract_days)
 

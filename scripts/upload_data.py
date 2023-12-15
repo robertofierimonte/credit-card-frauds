@@ -7,7 +7,7 @@ from pathlib import Path
 import holidays
 import numpy as np
 import pandas as pd
-from google.cloud import bigquery, storage
+from google.cloud import bigquery
 from google.cloud.exceptions import Conflict
 from loguru import logger
 
@@ -48,6 +48,8 @@ if __name__ == "__main__":
     # Get project info and set dataset name
     project_name = os.environ.get("VERTEX_PROJECT_ID")
     project_location = os.environ.get("VERTEX_LOCATION")
+
+    # Upload the data to BQ
 
     # Create the BQ client
     bq_client = bigquery.Client(project=project_name, location=project_location)
@@ -143,35 +145,38 @@ if __name__ == "__main__":
             "already exists. Skipping creation."
         )
 
-    # Create the GCS client
-    pipeline_root = os.environ.get("VERTEX_PIPELINE_ROOT")
-    pipeline_root = pipeline_root.replace("gs://", "")
-    gcs_path = f"{pipeline_root}/data/{data_version}"
-    gcs_client = storage.Client(project=project_name)
+    # # Upload the data to GCS
 
-    # Check if pipeline root bucket exist, otherwise create it.
-    bucket_name = pipeline_root.split("/")[0]
-    bucket = storage.Bucket(client=gcs_client, name=bucket_name)
-    if not bucket.exists():
-        bucket.create()
-        logger.info(
-            f"Created GCS bucket gs://{bucket.name} in location {project_location}."
-        )
+    # # Create the GCS client
+    # pipeline_root = os.environ.get("VERTEX_PIPELINE_ROOT")
+    # pipeline_root = pipeline_root.replace("gs://", "")
+    # gcs_client = storage.Client(project=project_name)
 
-    # Check if transactions blob exists. If not, upload the transactions file.
-    transactions_blob = storage.Blob(f"{gcs_path}/transactions.csv", bucket=bucket)
-    if not transactions_blob.exists():
-        transactions_blob.upload_from_filename(_TRANSACTIONS_FILE)
-        logger.info(f"Uploaded transactions data to gs://{gcs_path}/transactions.csv .")
+    # # Check if pipeline root bucket exist, otherwise create it.
+    # bucket_name = pipeline_root.split("/")[0]
+    # bucket = storage.Bucket(client=gcs_client, name=bucket_name)
+    # if not bucket.exists():
+    #     bucket.create()
+    #     logger.info(
+    #         f"Created GCS bucket gs://{bucket.name} in location {project_location}."
+    #     )
 
-    # Check if users blob exists. If not, upload the users file.
-    users_blob = storage.Blob(f"{gcs_path}/users.csv", bucket=bucket)
-    if not users_blob.exists():
-        users_blob.upload_from_filename(_USERS_FILE)
-        logger.info(f"Uploaded users data to gs://{gcs_path}/users.csv .")
+    # gcs_path = f"{pipeline_root.split('/')[1:]}/data/{data_version}"
 
-    # Check if cards blob exists. If not, upload the cards file.
-    cards_blob = storage.Blob(f"{gcs_path}/cards.csv", bucket=bucket)
-    if not cards_blob.exists():
-        cards_blob.upload_from_filename(_CARDS_FILE)
-        logger.info(f"Uploaded cards data to gs://{gcs_path}/cards.csv .")
+    # # Check if transactions blob exists. If not, upload the transactions file.
+    # transactions_blob = storage.Blob(f"{gcs_path}/transactions.csv", bucket=bucket)
+    # if not transactions_blob.exists():
+    #     transactions_blob.upload_from_filename(_TRANSACTIONS_FILE)
+    #     logger.info(f"Uploaded transactions data to gs://{gcs_path}/transactions.csv .")
+
+    # # Check if users blob exists. If not, upload the users file.
+    # users_blob = storage.Blob(f"{gcs_path}/users.csv", bucket=bucket)
+    # if not users_blob.exists():
+    #     users_blob.upload_from_filename(_USERS_FILE)
+    #     logger.info(f"Uploaded users data to gs://{gcs_path}/users.csv .")
+
+    # # Check if cards blob exists. If not, upload the cards file.
+    # cards_blob = storage.Blob(f"{gcs_path}/cards.csv", bucket=bucket)
+    # if not cards_blob.exists():
+    #     cards_blob.upload_from_filename(_CARDS_FILE)
+    #     logger.info(f"Uploaded cards data to gs://{gcs_path}/cards.csv .")

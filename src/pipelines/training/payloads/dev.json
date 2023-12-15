@@ -1,6 +1,6 @@
 {
     "attributes": {
-        "enable_caching": "False",
+        "enable_caching": "True",
         "template_path": "training.json"
     },
     "data": {

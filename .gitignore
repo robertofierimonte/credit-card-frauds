@@ -6,6 +6,9 @@ model/*
 training.json
 deployment.json
 
+# Test notebook
+notebooks/99-test.ipynb
+
 # Compiled and optimised Python bytecode
 __pycache__/
 *.py[cod]

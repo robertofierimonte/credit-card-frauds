@@ -1,3 +1,4 @@
+import json
 import os
 import warnings
 from pathlib import Path
@@ -95,7 +96,7 @@ def training_pipeline(
 
         current_timestamp = (
             get_current_time(
-                timestamp="{{$.pipeline_job_create_time_utc}}",
+                timestamp=dsl.PIPELINE_JOB_CREATE_TIME_UTC_PLACEHOLDER,
                 format_str="%Y%m%d%H%M%S",
             )
             .set_display_name("Format current timestamp")
@@ -125,7 +126,7 @@ def training_pipeline(
             features=features,
         )
 
-        query_job_config = dict(use_query_cache=True)
+        query_job_config = json.dumps(dict(use_query_cache=True))
 
         preprocess_data = (
             execute_query(
@@ -205,22 +206,30 @@ def training_pipeline(
 
         lookup_champion_model = (
             lookup_model(
-                model_name="credit-card-frauds-champion",
+                model_name="credit-card-frauds",
                 project_id=project_id,
                 project_location=project_location,
+                model_version="champion",
             )
             .set_display_name("Lookup champion model")
             .set_caching_options(True)
         )
 
-        model_labels = dict(
-            environment=ENVIRONMENT,
-            branch_name=BRANCH_NAME,
-            commit_hash=COMMIT_HASH,
-            release_tag=RELEASE_TAG,
+        model_labels = json.dumps(
+            dict(
+                environment=ENVIRONMENT,
+                branch_name=BRANCH_NAME,
+                commit_hash=COMMIT_HASH,
+                release_tag=RELEASE_TAG,
+                pipeline_id=dsl.PIPELINE_JOB_ID_PLACEHOLDER,
+                pipeline_name=dsl.PIPELINE_JOB_NAME_PLACEHOLDER,
+                pipeline_timestamp=f"{current_timestamp.output}",
+                data_version=f"{data_version.output}",
+            )
         )
 
         with dsl.ParallelFor(items=models, name="Train and evaluate models") as item:
+
             train = (
                 train_job(
                     training_data=extract_training_data.outputs["dataset"],
@@ -259,8 +268,6 @@ def training_pipeline(
                     project_id=project_id,
                     project_location=project_location,
                     model=train.outputs["model"],
-                    pipeline_timestamp=f"{current_timestamp.output}",
-                    data_version=f"{data_version.output}",
                     labels=model_labels,
                     description="Credit card frauds model",
                     is_default_version=False,
@@ -283,14 +290,15 @@ def training_pipeline(
             .set_caching_options(True)
         )
 
-        with dsl.Condition(
+        with dsl.If(
             lookup_champion_model.outputs["Output"] != "", "Champion model exists"
         ):
             export_champion_model = (
                 export_model(
-                    model_id="credit-card-frauds-champion",
+                    model_id="credit-card-frauds",
                     project_id=project_id,
                     project_location=project_location,
+                    model_version="champion",
                     model_file_name="model.joblib",
                 )
                 .set_display_name("Export champion model")
@@ -313,17 +321,16 @@ def training_pipeline(
 
         upload_challenger = (
             upload_model(
-                model_id="credit-card-frauds-challenger",
-                display_name="credit-card-frauds-challenger",
+                model_id="credit-card-frauds",
+                display_name="credit-card-frauds",
                 serving_container_image_uri=PIPELINE_IMAGE_NAME,
                 project_id=project_id,
                 project_location=project_location,
                 model=compare_candidates.outputs["best_model"],
-                pipeline_timestamp=f"{current_timestamp.output}",
-                data_version=f"{data_version.output}",
                 labels=model_labels,
-                description="Credit card frauds challenger model",
-                is_default_version=True,
+                description="Credit card frauds model",
+                is_default_version=False,
+                version_aliases=["challenger"],
             )
             .set_display_name("Upload challenger model")
             .set_caching_options(True)

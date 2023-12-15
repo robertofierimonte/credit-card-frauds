@@ -11,14 +11,12 @@ def upload_model(
     project_id: str,
     project_location: str,
     model: Input[Model],
-    labels: dict,
+    labels: str,
     description: str,
     is_default_version: bool,
     serving_container_params: dict = None,
     version_description: str = None,
-    version_alias: list = [],
-    pipeline_timestamp: str = None,
-    data_version: str = None,
+    version_aliases: list = [],
     model_name: str = None,
 ) -> str:
     """Upload a model from GCS to the Vertex AI model registry.
@@ -31,7 +29,8 @@ def upload_model(
         project_id (str): GCP Project ID where the model will be saved.
         project_location (str): Location where the model will be saved.
         model (Input[Model]): Model to be uploaded.
-        labels (dict): Labels with user-defined metadata to organise the model.
+        labels (str): JSON-serialised dict of labels with user-defined metadata to
+            organise the model.
         description (str): Description of the model.
         is_default_version (bool): When set to True, the newly uploaded model version
             will automatically have alias "default" included. When set to False, the
@@ -39,16 +38,16 @@ def upload_model(
         serving_container_params (dict, optional)
         version_description (str, optional): Description of the version of the model
             being uploaded. Defaults to None.
-        version_alias (str, optional): User provided version alias so that a model
+        version_aliases (list, optional): User provided version aliases so that a model
             version can be referenced via alias instead of auto-generated version ID.
             Defaults to [].
-        pipeline_timestamp (str, optional):
-        data_version (str, optional):
         model_name (str, optional):
 
     Returns:
         str: Resource name of the exported model
     """
+    import json
+
     from google.api_core.exceptions import NotFound
     from google.cloud.aiplatform import Model
     from loguru import logger
@@ -70,21 +69,21 @@ def upload_model(
         logger.info("Parent model not found.")
         parent_model = None
 
-    if data_version is not None:
-        labels["data_version"] = data_version.replace("T", "")
-    if pipeline_timestamp is not None:
-        labels["pipeline_timestamp"] = pipeline_timestamp.replace("T", "")
+    labels = json.loads(labels)
+    if "data_version" in labels:
+        labels["data_version"] = labels["data_version"].replace("T", "")
+    if "pipeline_timestamp" in labels:
+        labels["pipeline_timestamp"] = labels["pipeline_timestamp"].replace("T", "")
     if model_name is not None:
-        version_alias.append(
-            f"{model_name.replace('_', '-')}-{labels.get('timestamp', 'no-timestamp')}"
-        )
-        labels["model_name"] = model_name
-    if version_alias == []:
-        version_alias = None
+        labels["algorithm"] = model_name
+    if version_aliases == []:
+        version_aliases = None
     if serving_container_params is None:
         serving_container_params = {}
 
-    logger.debug(f"Version aliases: {version_alias}")
+    print(labels)
+
+    logger.debug(f"Version aliases: {version_aliases}")
     logger.debug(f"Labels: {labels}")
     logger.debug(f"Serving container params: {serving_container_params}")
 
@@ -95,7 +94,7 @@ def upload_model(
         location=project_location,
         display_name=display_name,
         parent_model=parent_model,
-        version_aliases=version_alias,
+        version_aliases=version_aliases,
         is_default_version=is_default_version,
         serving_container_image_uri=serving_container_image_uri,
         artifact_uri=model_uri,

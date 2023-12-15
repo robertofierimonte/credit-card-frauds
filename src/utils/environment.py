@@ -52,7 +52,7 @@ def get_current_git_info() -> Tuple[bool, str, str, str, str, str]:
         )
     elif os.environ.get("CI") and os.environ.get("GITHUB_ACTIONS"):
         # Pick up git info if running from Github Actions CI
-        env = os.environ.get("")
+        env = os.environ.get("GITHUB_ENVIRONMENT", "no-env")
         sha = os.environ.get("GITHUB_SHA", "no-sha")[:7]
         ref_type = os.environ.get("GITHUB_REF_TYPE")
         if ref_type == "branch":
