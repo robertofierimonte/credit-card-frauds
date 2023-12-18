@@ -40,10 +40,10 @@
 The goal of this project is to implement training and serving pipelines for credit card fraud detection models in GCP.
 
 The project aims at showcasing technical skills and understanding of:
-  - Data handling, storage, and processing.
-  - Model training, versioning, and deployment.
-  - Model monitoring.
-  - Cloud platforms.
+  - Handling, storing, processing, and versioning data.
+  - Training, versioning, and deployment of ML models.
+  - Monitoring and automated retraining of ML models.
+  - General proficiency in Google Cloud Platform.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -56,10 +56,9 @@ The project aims at showcasing technical skills and understanding of:
 - [Docker](https://www.docker.com/) (we are using version `24.0.6`)
 - [Terraform](https://www.terraform.io/) (we are using version `1.5.7`)
 - [Google Cloud CLI SDK](https://cloud.google.com/sdk/docs/install)
-- `make`
-- `base64`
+- [GNU make](https://www.gnu.org/software/make/) (included by default in Linux and Mac machines, must be installed on Windows)
 
-Accounts:
+**Accounts:**
 - A [Kaggle](https://www.kaggle.com/) account and relative API credentials
 - A [GCP](https://cloud.google.com/) account and relative API credentials
 
@@ -107,10 +106,14 @@ credit-card-frauds
 In the repository, execute:
 
 1. Install the required version of poetry: `pip install --upgrade pip --quiet && pip install poetry==1.6.1 --quiet`
-2. Download the data, set up the virtual environment, install the packages, and configure the Jupyter kernel: `make setup` (don't worry about an error message related to some dependencies not being installed, that will be fixed by installing the dependencies during the setup)
+2. Download and install the required verion of python: `pyenv install $(sh cat .python-version)` (accept if requested)
+3. Download the data, set up the virtual environment, install the packages, and configure the Jupyter kernel: `make setup` (don't worry about an error message related to some dependencies not being installed, that will be fixed by installing the dependencies during the setup)
 3. Create 2 configuration files (`.env`, and `kaggle.json`) by copying the examples provided
 4. Populate the configuration files with the necessary environment variables
 5. See all the options provided in the Makefile: `make help`
+
+**LightGBM not installing on Mac M1/M2:**
+- If the `make setup` command breaks with the error `Exception: An error has occurred while building lightgbm library file` when installing dependencies on Macbooks with M1/M2 processors, you can fix it by using a more recent version of `libomp`: `brew install libomp && export LDFLAGS="-L/opt/homebrew/opt/libomp/lib" CPPFLAGS="-I/opt/homebrew/opt/libomp/include" && make setup`. Don't forget to restart the terminal afterwards to reset the env variables to their original values.
 
 ### Running the code
 

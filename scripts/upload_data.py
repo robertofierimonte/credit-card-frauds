@@ -33,17 +33,21 @@ if __name__ == "__main__":
     data_version = None
     if args.data_version and args.data_version != "":
         # If a correct timestamp is provided, use it as the data version number
-        if re.match(r"\d{8}T\d{6}", args.data_version):
+        if re.match(
+            r"^[0-9]{4}(((0[13578]|(10|12))(0[1-9]|[1-2][0-9]|3[0-1]))|(02(0[1-9]|[1-2][0-9]))|((0[469]|11)(0[1-9]|[1-2][0-9]|30)))(([01]\d|2[0-3])([0-5]\d)([0-5]\d))$",  # noqa: E501
+            args.data_version,
+        ):
             data_version = args.data_version
             logger.info(f"Provided data version: {data_version}.")
         else:
             logger.warning(
-                "Argument `data-version` is in the wrong format. It will be ignored."
+                "Argument `data-version` is in the wrong format "
+                "(format must be %Y%m%d%H%M%S). It will be ignored."
             )
     if data_version is None:
         # Set the version number of the data asset to the current UTC time
         logger.info("Data version not provided, setting to current timestamp...")
-        data_version = datetime.now().strftime("%Y%m%dT%H%M%S")
+        data_version = datetime.now().strftime("%Y%m%d%H%M%S")
 
     # Get project info and set dataset name
     project_name = os.environ.get("VERTEX_PROJECT_ID")
@@ -86,7 +90,7 @@ if __name__ == "__main__":
         table = bq_client.get_table(table_id)
         logger.info(
             f"Loaded {table.num_rows} rows and {len(table.schema)} columns "
-            f"of US holidays data into {table_id}."
+            f"of US holidays data into {table_id} ."
         )
 
         # Load the data into the dataset
@@ -108,7 +112,7 @@ if __name__ == "__main__":
             table = bq_client.get_table(table_id)
             logger.info(
                 f"Loaded {table.num_rows} rows and {len(table.schema)} columns "
-                f"of transactions data into {table_id}."
+                f"of transactions data into {table_id} ."
             )
 
         with open(_USERS_FILE, "rb") as f:
@@ -122,7 +126,7 @@ if __name__ == "__main__":
             table = bq_client.get_table(table_id)
             logger.info(
                 f"Loaded {table.num_rows} rows and {len(table.schema)} columns "
-                f"of users data into {table_id}."
+                f"of users data into {table_id} ."
             )
 
         with open(_CARDS_FILE, "rb") as f:
@@ -134,7 +138,7 @@ if __name__ == "__main__":
             table = bq_client.get_table(table_id)
             logger.info(
                 f"Loaded {table.num_rows} rows and {len(table.schema)} columns "
-                f"of cards data into {table_id}."
+                f"of cards data into {table_id} ."
             )
 
         logger.info("Data upload complete.")

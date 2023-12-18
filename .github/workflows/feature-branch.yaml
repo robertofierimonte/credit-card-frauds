@@ -1,0 +1,79 @@
+---
+name: Feature branch CI/CD Pipeline
+
+on:  # yamllint disable-line rule:truthy
+  push:
+  branches-ignore:
+    - 'main'
+
+jobs:
+  install-dependencies:
+  runs-on: ubuntu-latest
+
+  environment:
+    name: dev
+
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10.11'
+
+    - name: Install Poetry
+      run: |
+        python3 -m pip install --user pipx
+        python3 -m pipx ensurepath
+        pipx install poetry==1.6.1
+        poetry --version
+        poetry config virtualenvs.in-project true
+
+    - name: Cache dependencies
+      id: install-dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{ github.workspace }}/.venv
+        key: ${{ runner.os }}-packages-${{ hashFiles('poetry.lock') }}
+
+    - name: Install dependencies
+      if: ${{ steps.install-dependencies.outputs.cache-hit != 'true' }}
+      run: make setup
+
+  build-docker-image:
+    needs: install-dependencies
+
+    runs-on: ubuntu-latest
+
+    environment:
+      name: dev
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get GCP credentials
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Test Cloud SDK
+        run: gcloud info
+
+      - name: Build and push Docker image
+        run: make push-image
+
+  run-unit-tests:
+    steps:
+      - name: Run unit tests
+        run: make run-unit-tests
+
+      - name: Upload unit tests coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage.xml

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, NamedTuple
 
 from kfp.dsl import Dataset, Input, Model, Output, component
 
@@ -10,10 +10,11 @@ def compare_models(
     test_data: Input[Dataset],
     target_column: str,
     models: Input[List[Model]],
+    model_resource_names: list,
     best_model: Output[Model],
     metric_to_optimise: str,
     higher_is_better: bool = True,
-) -> list:
+) -> NamedTuple("Outputs", [("metrics", list), ("best_model_version", str)]):
     """Compare a collection of candidate models and return the best model.
 
     Args:
@@ -30,6 +31,7 @@ def compare_models(
 
     Returns:
         list: Values of `metric_to_optimise` for all the candidate models.
+        str: Vertex AI version of the best candidate model.
     """
     import joblib
     import numpy as np
@@ -42,8 +44,8 @@ def compare_models(
     setup_logger()
 
     candidates = [joblib.load(m.path) for m in models]
-    logger.debug(f"Len(candidates): {len(candidates)}")
-    logger.debug(f"Candidates: {candidates}")
+    # logger.debug(f"Number of candidates: {len(candidates)}.")
+    # logger.debug(f"Candidates: {candidates}.")
 
     df_test = pd.read_parquet(test_data.path)
     df_test = df_test.drop(columns=["transaction_id"])
@@ -63,5 +65,12 @@ def compare_models(
     best_model.path = best_candidate.path
     best_model.uri = best_candidate.uri
     best_model.metadata = best_candidate.metadata
+    best_model_name = best_candidate.uri.rsplit("/", 2)[1]
+    best_model_version = model_resource_names[best_idx].split("@")[1]
+    logger.info(
+        f"Best model name: {best_model_name}, "
+        f"best model metric: {metrics[best_idx]}, "
+        f"best model version: {best_model_version}."
+    )
 
-    return metrics
+    return metrics, best_model_version

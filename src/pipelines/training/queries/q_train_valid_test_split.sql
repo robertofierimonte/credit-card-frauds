@@ -5,7 +5,12 @@ DECLARE train_limit INT64 DEFAULT (
 )
 ;
 
-CREATE OR REPLACE TABLE `{{ training_table }}` AS (
+{% if create_replace_table is sameas true %}
+CREATE OR REPLACE TABLE
+{% else %}
+CREATE TABLE IF NOT EXISTS
+{% endif %}
+`{{ training_table }}` AS (
     SELECT t.* EXCEPT(datetime_unix_seconds)
 
     FROM `{{ source_table }}` t
@@ -24,7 +29,12 @@ CREATE TEMP TABLE validation_testing AS (
 )
 ;
 
-CREATE OR REPLACE TABLE `{{ validation_table }}` AS (
+{% if create_replace_table is sameas true %}
+CREATE OR REPLACE TABLE
+{% else %}
+CREATE TABLE IF NOT EXISTS
+{% endif %}
+`{{ validation_table }}` AS (
     SELECT t.*
 
     FROM validation_testing t
@@ -33,7 +43,12 @@ CREATE OR REPLACE TABLE `{{ validation_table }}` AS (
 )
 ;
 
-CREATE OR REPLACE TABLE `{{ testing_table }}` AS (
+{% if create_replace_table is sameas true %}
+CREATE OR REPLACE TABLE
+{% else %}
+CREATE TABLE IF NOT EXISTS
+{% endif %}
+`{{ testing_table }}` AS (
     SELECT t.*
 
     FROM validation_testing t

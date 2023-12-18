@@ -7,11 +7,14 @@ from src.components.dependencies import MATPLOTLIB, PIPELINE_IMAGE_NAME
 def train_evaluate_model(
     training_data: Input[Dataset],
     validation_data: Input[Dataset],
+    test_data: Input[Dataset],
     target_column: str,
     model_name: str,
     train_metrics: Output[Metrics],
     valid_metrics: Output[Metrics],
+    test_metrics: Output[Metrics],
     valid_pr_curve: Output[Artifact],
+    test_pr_curve: Output[Artifact],
     model: Output[Model],
     models_params: dict = {},
     fit_args: dict = {},
@@ -24,6 +27,7 @@ def train_evaluate_model(
         training_data (Input[Dataset]): Training data as a KFP Dataset object.
         validation_data (Input[Dataset]): Validation data (used to prevent overfitting)
             as a KFP Dataset object.
+        test_data (Input[Dataset]): Evaluation data as a KFP Dataset object.
         target_column (str): Column containing the target column for classification.
         model_name (str): Name of the classifier that will be trained. Must be one of
             'logistic_regression', 'sgd_classifier', 'random_forest', 'lightgbm',
@@ -36,8 +40,15 @@ def train_evaluate_model(
             on the validation data. This parameter will be passed automatically
             by the orchestrator and it can be referred to by clicking on the
             component's execution in the pipeline.
+        test_metrics (Output[Metrics]): Output metrics for the trained model
+            on the test data. This parameter will be passed automatically
+            by the orchestrator and it can be referred to by clicking on the
+            component's execution in the pipeline.
         valid_pr_curve (Output[Artifact]): The output file for precision-recall plot
             on the validation data as a KFP Artifact object. This parameter will
+            be passed automatically by the orchestrator.
+        test_pr_curve (Output[Artifact]): The output file for precision-recall plot
+            on the test data as a KFP Artifact object. This parameter will
             be passed automatically by the orchestrator.
         model (Output[Model]): Output model as a KFP Model object, this parameter
             will be passed automatically by the orchestrator. The .path
@@ -57,7 +68,6 @@ def train_evaluate_model(
 
     import joblib
     import pandas as pd
-    from google.cloud import storage
     from lightgbm import LGBMClassifier
     from loguru import logger
     from sklearn.ensemble import RandomForestClassifier
@@ -79,6 +89,11 @@ def train_evaluate_model(
     df_valid = df_valid.drop(columns=["transaction_id"])
     y_valid = df_valid.pop(target_column)
     logger.info(f"Loaded evaluation data, shape {df_valid.shape}.")
+
+    df_test = pd.read_parquet(test_data.path)
+    df_test = df_test.drop(columns=["transaction_id"])
+    y_test = df_test.pop(target_column)
+    logger.info(f"Loaded test data, shape {df_test.shape}.")
 
     use_eval_set = False
     model_params = models_params.get(model_name, {})
@@ -116,36 +131,41 @@ def train_evaluate_model(
         **data_processing_args,
     )
     logger.info("Training completed.")
-    logger.debug(f"Type of classifier: {type(classifier)}.")
-    logger.debug(f"Classifier: {classifier}.")
     for k, v in training_metrics.items():
-        if k != "Precision Recall Curve":
+        if k != "precision_recall_curve":
             train_metrics.log_metric(k, v)
 
     validation_metrics, _, _ = evaluate_model(classifier, df_valid, y_valid)
-    logger.info("Evaluation completed.")
     for k, v in validation_metrics.items():
-        if k != "Precision Recall Curve":
+        if k != "precision_recall_curve":
             valid_metrics.log_metric(k, v)
 
-    logger.debug(f"Type of classifier: {type(classifier)}.")
-    logger.debug(f"Classifier: {classifier}.")
+    testing_metrics, _, _ = evaluate_model(classifier, df_test, y_test)
+    for k, v in testing_metrics.items():
+        if k != "precision_recall_curve":
+            test_metrics.log_metric(k, v)
+
+    logger.info("Evaluation completed.")
 
     if model_gcs_folder_path is not None:
         model_gcs_folder_path = model_gcs_folder_path.replace("gs://", "/gcs/")
         model.path = model_gcs_folder_path
         valid_pr_curve.path = model_gcs_folder_path
+        test_pr_curve.path = model_gcs_folder_path
 
     model.path = f"{model.path}/{model_name}/model.joblib"
     model_dir = Path(model.path).parent.absolute()
     model_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"Saving model to {model.path}.")
     joblib.dump(classifier, model.path)
+    logger.info(f"Saved model to {model.path}.")
 
     valid_pr_curve.path = (
-        valid_pr_curve.path + f"/precision_recall_curve_{model_name}.png"
+        f"{valid_pr_curve.path}/precision_recall_curve_validation_{model_name}.png"
     )
+    valid_pr_curve_dir = Path(valid_pr_curve.path).parent.absolute()
+    valid_pr_curve_dir.mkdir(parents=True, exist_ok=True)
+
     _ = plot_precision_recall_curve(
         model=classifier,
         model_name=model_name,
@@ -153,5 +173,19 @@ def train_evaluate_model(
         y=y_valid,
         save_path=valid_pr_curve.path,
     )
+    logger.info(f"Saved validation PR curve to {valid_pr_curve.path}.")
 
-    client = storage.Client()
+    test_pr_curve.path = (
+        f"{test_pr_curve.path}/precision_recall_curve_test_{model_name}.png"
+    )
+    test_pr_curve_dir = Path(test_pr_curve.path).parent.absolute()
+    test_pr_curve_dir.mkdir(parents=True, exist_ok=True)
+
+    _ = plot_precision_recall_curve(
+        model=classifier,
+        model_name=model_name,
+        X=df_test,
+        y=y_test,
+        save_path=test_pr_curve.path,
+    )
+    logger.info(f"Saved test PR curve to {test_pr_curve.path}.")

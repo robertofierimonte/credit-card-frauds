@@ -95,29 +95,17 @@ def evaluate_model(
         y, prediction_probabilities
     )
 
-    logger.info(f"Precision: {precision}.")
-    logger.info(f"Recall: {recall}.")
-    logger.info(f"F1 Score: {f1}.")
-    logger.info(f"F2 Score: {f2}.")
-    logger.info(f"F0.5 Score: {f05}.")
-    logger.info(f"Average Precision: {average_precision}.")
-    logger.info(f"Precision Top k: {precision_top_k}.")
-    logger.info(f"AUC ROC: {auc_roc}.")
-    logger.info(f"Number of correctly predicted frauds: {np.sum(y[predictions==1])}.")
-    logger.info(f"Number of predicted frauds: {np.sum(predictions)}.")
-    logger.info(f"Total number of frauds: {np.sum(y)}.")
-
     # Collect all test metrics in one list
     metrics = {
-        "Precision": precision,
-        "Recall": recall,
-        "F1 Score": f1,
-        "F2 Score": f2,
-        "F0.5 Score": f05,
-        "Average Precision": average_precision,
-        "Precision Top 200": precision_top_k,
-        "ROC AUC": auc_roc,
-        "Precision Recall Curve": [precisions, recalls, thresholds],
+        "precision": precision,
+        "recall": recall,
+        "f1_score": f1,
+        "f2_score": f2,
+        "f0.5_score": f05,
+        "average_precision": average_precision,
+        "precision_top_200": precision_top_k,
+        "roc_auc": auc_roc,
+        "precision_recall_curve": [precisions, recalls, thresholds],
     }
 
     return metrics, predictions, prediction_probabilities

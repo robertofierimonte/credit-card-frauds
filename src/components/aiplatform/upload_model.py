@@ -1,3 +1,5 @@
+from typing import NamedTuple
+
 from kfp.dsl import Input, Model, component
 
 from src.components.dependencies import PIPELINE_IMAGE_NAME
@@ -18,7 +20,7 @@ def upload_model(
     version_description: str = None,
     version_aliases: list = [],
     model_name: str = None,
-) -> str:
+) -> NamedTuple("Outputs", [("model_resource_name", str)]):
     """Upload a model from GCS to the Vertex AI model registry.
 
     Args:
@@ -29,13 +31,14 @@ def upload_model(
         project_id (str): GCP Project ID where the model will be saved.
         project_location (str): Location where the model will be saved.
         model (Input[Model]): Model to be uploaded.
-        labels (str): JSON-serialised dict of labels with user-defined metadata to
-            organise the model.
+        labels (str): JSON-serialised dict[str, str] of labels with user-defined
+            metadata to organise the model.
         description (str): Description of the model.
         is_default_version (bool): When set to True, the newly uploaded model version
             will automatically have alias "default" included. When set to False, the
             "default" alias will not be moved.
-        serving_container_params (dict, optional)
+        serving_container_params (dict, optional): Parameters of the model serving
+            container.
         version_description (str, optional): Description of the version of the model
             being uploaded. Defaults to None.
         version_aliases (list, optional): User provided version aliases so that a model
@@ -44,9 +47,10 @@ def upload_model(
         model_name (str, optional):
 
     Returns:
-        str: Resource name of the exported model
+        str: Resource name of the exported model.
     """
     import json
+    import re
 
     from google.api_core.exceptions import NotFound
     from google.cloud.aiplatform import Model
@@ -69,26 +73,23 @@ def upload_model(
         logger.info("Parent model not found.")
         parent_model = None
 
-    labels = json.loads(labels)
-    if "data_version" in labels:
-        labels["data_version"] = labels["data_version"].replace("T", "")
-    if "pipeline_timestamp" in labels:
-        labels["pipeline_timestamp"] = labels["pipeline_timestamp"].replace("T", "")
-    if model_name is not None:
-        labels["algorithm"] = model_name
     if version_aliases == []:
         version_aliases = None
     if serving_container_params is None:
         serving_container_params = {}
 
-    print(labels)
+    labels = json.loads(labels)
+    if model_name is not None:
+        labels["algorithm"] = model_name
+    for k, v in labels.items():
+        labels[k] = re.sub(r"[^0-9a-z\-]", "", v.lower().replace("_", "-"))
 
     logger.debug(f"Version aliases: {version_aliases}")
     logger.debug(f"Labels: {labels}")
     logger.debug(f"Serving container params: {serving_container_params}")
 
     logger.info("Uploading model to model registry.")
-    model = Model.upload(
+    aip_model = Model.upload(
         model_id=model_id,
         project=project_id,
         location=project_location,
@@ -104,5 +105,7 @@ def upload_model(
         sync=True,
         **serving_container_params,
     )
-    logger.info(f"Uploaded model {model}.")
-    return model.resource_name
+    logger.info(f"Uploaded model {aip_model}.")
+
+    model_resource_name = aip_model.versioned_resource_name
+    return (model_resource_name,)

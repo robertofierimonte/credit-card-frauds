@@ -6,6 +6,8 @@
     "data": {
         "dataset_id": "credit_card_frauds",
         "dataset_location": "europe-west2",
-        "data_version": ""
+        "data_version": "",
+        "create_replace_tables": true,
+        "skip_bq_extract_if_exists": false
     }
 }

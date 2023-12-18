@@ -48,7 +48,7 @@ def lookup_model(
             location=project_location,
             version=model_version,
         )
-        model_resource_name = target_model.resource_name
+        model_resource_name = target_model.versioned_resource_name
         logger.info(
             f"Model display name: {target_model.display_name}, "
             f"model resource name: {model_resource_name}, "

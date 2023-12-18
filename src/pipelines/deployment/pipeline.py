@@ -8,13 +8,16 @@ from google_cloud_pipeline_components.v1.vertex_notification_email import (
 from kfp import compiler, dsl
 from kfp.dsl.types.type_utils import InconsistentTypeWarning
 
-from src.base.utilities import read_json
-from src.components.aiplatform import deploy_model, export_model, upload_model
-from src.components.dependencies import PIPELINE_IMAGE_NAME
+from src.base.utilities import read_yaml
+from src.components.aiplatform import deploy_model, export_model, update_version_alias
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=InconsistentTypeWarning, append=True)
 
+if os.environ.get("CURRENT_TAG") != "no-tag":
+    MODEL_TAG = os.environ.get("CURRENT_TAG")
+else:
+    MODEL_TAG = os.environ.get("CURRENT_BRANCH")
 PIPELINE_TAG = os.environ.get("PIPELINE_TAG")
 PIPELINE_NAME = f"frauds-deployment-pipeline-{PIPELINE_TAG}"
 
@@ -36,7 +39,7 @@ def deployment_pipeline(
             notified upon completion (whether successful or not) of the pipeline.
     """
     config_folder = Path(__file__).parent.parent / "configuration"
-    serving_container_params = read_json(config_folder / "serving_container.json")
+    monitoring_config = read_yaml(config_folder / "endpoint_monitoring.yaml")
 
     notify_email_task = VertexNotificationEmailOp(
         recipients=email_notification_recipients
@@ -45,7 +48,8 @@ def deployment_pipeline(
 
         export = (
             export_model(
-                model_id="credit-card-frauds-challenger",
+                model_id="credit-card-frauds",
+                model_version="challenger",
                 project_id=project_id,
                 project_location=project_location,
                 model_file_name="model.joblib",
@@ -54,34 +58,34 @@ def deployment_pipeline(
             .set_caching_options(True)
         )
 
-        replace = (
-            upload_model(
-                model=export.outputs["model"],
-                model_id="credit-card-frauds-champion",
-                display_name="credit-card-frauds-champion",
-                serving_container_image_uri=PIPELINE_IMAGE_NAME,
-                serving_container_params=serving_container_params,
-                project_id=project_id,
-                project_location=project_location,
-                labels=export.outputs["labels"],
-                description="Credit card frauds champion model",
-                is_default_version=True,
-            )
-            .after(export)
-            .set_display_name("Crown challenger to champion")
-            .set_caching_options(True)
-        )
-
         deploy = (
             deploy_model(
-                model_id="credit-card-frauds-champion",
-                endpoint_id="credit-card-frauds-endpoint",
+                model_id="credit-card-frauds",
+                model_version="challenger",
+                endpoint_id="7894561234",
+                endpoint_display_name="credit-card-frauds-endpoint",
                 project_id=project_id,
                 dataset_id=dataset_id,
                 project_location=project_location,
+                monitoring=True,
+                monitoring_config=monitoring_config,
+                monitoring_email_recipients=email_notification_recipients,
             )
-            .after(replace)
-            .set_display_name("Deploy new champion")
+            .after(export)
+            .set_display_name("Deploy challenger to endpoint")
+            .set_caching_options(True)
+        )
+
+        replace = (
+            update_version_alias(
+                model_id="credit-card-frauds",
+                model_version="challenger",
+                version_aliases=["-challenger", "champion", MODEL_TAG],
+                project_id=project_id,
+                project_location=project_location,
+            )
+            .after(deploy)
+            .set_display_name("Update challenger alias to champion")
             .set_caching_options(True)
         )
 

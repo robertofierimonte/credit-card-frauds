@@ -41,7 +41,6 @@ def trigger_pipeline_from_payload(payload: dict) -> aiplatform.PipelineJob:
         aiplatform.PipelineJob: Pipeline job that is triggered as result
     """
     payload = convert_payload(payload)
-    logger.debug(f"data_version: {payload['data']['data_version']}.")
     env = get_env()
 
     return trigger_pipeline(
@@ -92,7 +91,7 @@ def trigger_pipeline(
     aiplatform.init(project=project_id, location=location)
 
     # Instantiate PipelineJob object
-    pipeline_job = aiplatform.pipeline_jobs.PipelineJob(
+    pipeline_job = aiplatform.PipelineJob(
         display_name="pipeline-execution",
         template_path=template_path,
         pipeline_root=pipeline_root,
@@ -221,7 +220,10 @@ def sandbox_run() -> Optional[aiplatform.PipelineJob]:
         payload = json.load(f)
 
     if args.data_version and args.data_version != "":
-        if re.match(r"\d{8}T\d{6}", args.data_version):
+        if re.match(
+            r"^[0-9]{4}(((0[13578]|(10|12))(0[1-9]|[1-2][0-9]|3[0-1]))|(02(0[1-9]|[1-2][0-9]))|((0[469]|11)(0[1-9]|[1-2][0-9]|30)))(([01]\d|2[0-3])([0-5]\d)([0-5]\d))$",  # noqa: E501
+            args.data_version,
+        ):
             payload["data"]["data_version"] = args.data_version
         else:
             logger.warning(

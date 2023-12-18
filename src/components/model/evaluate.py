@@ -47,5 +47,5 @@ def evaluate_model(
     testing_metrics, _, _ = evaluate_model(classifier, df_test, y_test)
     logger.info("Evaluation completed.")
     for k, v in testing_metrics.items():
-        if k != "Precision Recall Curve":
+        if k != "precision_recall_curve":
             test_metrics.log_metric(k, v)

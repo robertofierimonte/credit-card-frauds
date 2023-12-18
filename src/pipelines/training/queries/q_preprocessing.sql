@@ -427,7 +427,12 @@ AS (
 )
 ;
 
-CREATE OR REPLACE TABLE `{{ preprocessed_table }}`
+{% if create_replace_table is sameas true %}
+CREATE OR REPLACE TABLE
+{% else %}
+CREATE TABLE IF NOT EXISTS
+{% endif %}
+`{{ preprocessed_table }}`
 CLUSTER BY datetime_unix_seconds
 AS (
     SELECT
