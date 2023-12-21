@@ -55,3 +55,5 @@ repos:
         args: ["--lock"]
       - id: poetry-lock
         args: ["--no-update"]
+      - id: poetry-export
+        args: ["--only", "trigger", "-f", "requirements.txt", "-o", "requirements.txt"]

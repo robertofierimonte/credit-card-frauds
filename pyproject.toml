@@ -41,6 +41,7 @@ uvicorn = "^0.24.0.post1"
 gunicorn = "^21.2.0"
 fastapi = "^0.104.1"
 
+
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.17.0"
 pre-commit = "^2.20.0"
@@ -58,6 +59,7 @@ xmlrunner = "^1.7.7"
 unittest-xml-reporting = "^3.2.0"
 coverage = "^7.2.7"
 
+
 [tool.poetry.group.cicd.dependencies]
 pre-commit = "^2.20.0"
 loguru = "^0.7.0"
@@ -68,8 +70,14 @@ kfp = "^2.0.0"
 google-cloud-pipeline-components = "^2.0.0"
 google-cloud-aiplatform = "^1.25.0"
 
+
 [tool.poetry.group.beam.dependencies]
 apache-beam = {version = "^2.52.0", extras = ["gcp"]}
+
+
+[tool.poetry.group.trigger.dependencies]
+google-cloud-aiplatform = "^1.38.1"
+google-api-python-client = "^2.111.0"
 
 [build-system]
 requires = ["poetry-core"]
