@@ -103,7 +103,7 @@ credit-card-frauds
 
 ### Local setup
 
-In the repository, execute:
+In the root directory of the repository, execute:
 
 1. Install the required version of poetry: `pip install --upgrade pip --quiet && pip install poetry==1.6.1 --quiet`
 2. Download and install the required verion of python: `pyenv install $(sh cat .python-version)` (accept if requested)
