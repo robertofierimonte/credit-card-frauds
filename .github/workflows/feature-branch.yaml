@@ -13,20 +13,19 @@ jobs:
       name: dev
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.10.11'
+        uses: actions/checkout@v4
 
       - name: Install Poetry
         run: |
-          python3 -m pip install --user pipx
-          python3 -m pipx ensurepath
           pipx install poetry==1.6.1
           poetry --version
           poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.11'
+          cache: poetry
 
       - name: Cache dependencies
         id: install-dependencies
@@ -39,19 +38,75 @@ jobs:
         if: ${{ steps.install-dependencies.outputs.cache-hit != 'true' }}
         run: make setup
 
-  build-docker-image:
+  run-pre-commits:
     needs: install-dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.11'
+          cache: poetry
+
+      - name: Cache dependencies
+        id: install-dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/.venv
+          key: ${{ runner.os }}-packages-${{ hashFiles('poetry.lock') }}
+
+      - name: Install dependencies
+        if: ${{ steps.install-dependencies.outputs.cache-hit != 'true' }}
+        run: make setup
+
+      - name: Run pre-commit hooks
+        run: make pre-commit
+
+  build-docker-image:
+    needs: run-pre-commits
     runs-on: ubuntu-latest
     environment:
       name: dev
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.11'
+          cache: poetry
+
+      - name: Cache dependencies
+        id: install-dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/.venv
+          key: ${{ runner.os }}-packages-${{ hashFiles('poetry.lock') }}
+
+      - name: Install dependencies
+        if: ${{ steps.install-dependencies.outputs.cache-hit != 'true' }}
+        run: make setup
 
       - name: Get GCP credentials
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: '${{ secrets.TF_SERVICE_ACCOUNT_KEY }}'
+          credentials_json: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -61,15 +116,18 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          echo $TF_SERVICE_ACCOUNT_KEY | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
+          echo $CI
+          echo $GITHUB_REF_NAME
+          echo $TF_SERVICE_ACCOUNT_KEY > $GOOGLE_APPLICATION_CREDENTIALS
           make push-image
         env:
+          GITHUB_REF_NAME: ${{ github.ref }}
           DOCKER_REPO: docker-repo
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/credentials.json
+          GOOGLE_APPLICATION_CREDENTIALS: credentials.json
           TF_SERVICE_ACCOUNT_KEY: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
-          VERTEX_PROJECT_ID: ${{ env.VERTEX_PROJECT_ID }}
-          VERTEX_LOCATION: ${{ env.VERTEX_LOCATION }}
-          VERTEX_SA_EMAIL: ${{ env.VERTEX_SA_EMAIL }}
+          VERTEX_PROJECT_ID: ${{ vars.VERTEX_PROJECT_ID }}
+          VERTEX_LOCATION: ${{ vars.VERTEX_LOCATION }}
+          VERTEX_SA_EMAIL: ${{ vars.VERTEX_SA_EMAIL }}
 
   run-unit-tests:
     needs: build-docker-image

@@ -36,8 +36,8 @@ def test_gcs_uri(output_uri: str, storage_client: storage.Client) -> Optional[in
         storage_client: (GCS client object) The GCS client for the project
 
     Returns:
-        Optional[int]: None if the output_uri is not a file or a folder and therefore does not exist,
-        The uri's size otherwise (folder size if it is a folder).
+        Optional[int]: The uri's size otherwise (folder size if it is a folder) if the
+            output_uri exists, otherwise None.
     """
     bucket_name, blob_path = split_output_uri(output_uri)
     bucket = storage_client.get_bucket(bucket_name)
@@ -202,9 +202,11 @@ def test_pipeline_tasks(tasks: list, expected_tasks: dict, allow_tasks_missing: 
         diff = set(expected_output).symmetric_difference(actual_outputs.keys())
         assert (
             len(diff) == 0
-        ), f"task: {task_name}, \\
-            expected_output {expected_output}, \\
-            actual_outputs: {actual_outputs.keys()}"
+        ), (
+            f"task: {task_name}, "
+            f"expected_output {expected_output}, "
+            f"actual_outputs: {actual_outputs.keys()}."
+        )
         for output_artifact in expected_output:
             output_uri = actual_outputs[output_artifact]
 
@@ -229,9 +231,10 @@ def test_pipeline_tasks(tasks: list, expected_tasks: dict, allow_tasks_missing: 
                 )
                 assert (
                     object_existence
-                ), f"{output_artifact} in task {task_name} is not accessible \\
-                    with {output_uri.split('/')[-1]}"
-
+                ), (
+                    f"{output_artifact} in task {task_name} is not accessible "
+                    f"with {output_uri.split('/')[-1]}."
+                )
 
 
 def pipeline_e2e_test(

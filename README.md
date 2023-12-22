@@ -60,7 +60,7 @@ The project aims at showcasing technical skills and understanding of:
 
 **Accounts:**
 - A [Kaggle](https://www.kaggle.com/) account and relative API credentials
-- A [GCP](https://cloud.google.com/) account and relative API credentials
+- A [GCP](https://cloud.google.com/) account with Vertex AI APIs enabled and relative Service Accounts. For more info about the GCP configuration please refer to the [GCP README](./docs/GCP.md).
 
 ### Repo structure
 
@@ -68,6 +68,7 @@ The repository is structured as follows:
 
 ```
 credit-card-frauds
+├── .github
 ├── containers
 ├── data
 ├── docs
@@ -84,22 +85,24 @@ credit-card-frauds
 └── tests
 ```
 
-- The `containers` folder
+- The `.github` folder contains the Github Actions CI/CD workflows
+- The `containers` folder contains the Dockerfile for the base image
 - The `data` folder is empty and it will be populated with the dataset after completing the local setup
 - The `docs` folder contains the images and additional documentation about the project
 - The `notebooks` folder contains the notebooks provided for exploratory analysis on the data, as well as the training and testing of the models
-- The `src` folder contains the source code for the ML
+- The `scripts` folder contains the scripts for downloading the raw data from Kaggle and uploading it to Bigquery. For more info run: `poetry run python scripts/upload_data.py --help`
+- The `src` folder contains the source code for the ML model
      * The `base` subfolder contains the code provided used for the exploratory analysis and the modelling
      * The `components` subfolder contains the code for the pipeline's components
      * The `pipelines` subfolder contains the code for the training pipeline
      * The `serving_api` subfolder contains the code to deploy the model on a Vertex AI endpoint or on a local endpoint and to use it to make predictions
-     * The `scripts` folder contains the python entry-point scripts used to interact with the code
+     * The `trigger` subfolder contains the code to trigger the Vertex AI pipelines
      * The `utils` subfolder contains the code to support other functionalities (e.g. manage environment variables and patch jupyter notebooks)
 - The `tests` folder contains the unit tests for the source code
 
 ### GCP setup
 
-### Bitbucket CICD setup
+Please refer to the [GCP README](./docs/GCP.md).
 
 ### Local setup
 
@@ -107,13 +110,14 @@ In the root directory of the repository, execute:
 
 1. Install the required version of poetry: `pip install --upgrade pip --quiet && pip install poetry==1.6.1 --quiet`
 2. Download and install the required verion of python: `pyenv install $(sh cat .python-version)` (accept if requested)
-3. Download the data, set up the virtual environment, install the packages, and configure the Jupyter kernel: `make setup` (don't worry about an error message related to some dependencies not being installed, that will be fixed by installing the dependencies during the setup)
-3. Create 2 configuration files (`.env`, and `kaggle.json`) by copying the examples provided
-4. Populate the configuration files with the necessary environment variables
-5. See all the options provided in the Makefile: `make help`
+3. Set up the virtual environment, install the packages, and configure the Jupyter kernel: `make setup` (don't worry about an error message related to some dependencies not being installed, that will be fixed by installing the dependencies during the setup)
+4. Create 2 configuration files (`.env`, and `kaggle.json`) by copying the examples provided: `cp .env.example .env && cp kaggle.json.example kaggle.json`
+5. Populate the `.env` and `kaggle.json` configuration files with the necessary environment variables
+6. Download the data: `make download-data`
+7. See all the options provided in the Makefile: `make help`
 
 **LightGBM not installing on Mac M1/M2:**
-- If the `make setup` command breaks with the error `Exception: An error has occurred while building lightgbm library file` when installing dependencies on Macbooks with M1/M2 processors, you can fix it by using a more recent version of `libomp`: `brew install libomp && export LDFLAGS="-L/opt/homebrew/opt/libomp/lib" CPPFLAGS="-I/opt/homebrew/opt/libomp/include" && make setup`. Don't forget to restart the terminal afterwards to reset the env variables to their original values.
+- If the `make setup` command fails with the error `Exception: An error has occurred while building lightgbm library file` when installing dependencies on Macbooks with M1/M2 processors, you can fix it by using a more recent version of `libomp`: `brew install libomp && export LDFLAGS="-L/opt/homebrew/opt/libomp/lib" CPPFLAGS="-I/opt/homebrew/opt/libomp/include" && make setup`. Don't forget to restart the terminal afterwards to reset the env variables to their original values.
 
 ### Running the code
 

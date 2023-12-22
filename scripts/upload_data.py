@@ -25,7 +25,7 @@ if __name__ == "__main__":
         type=str,
         required=False,
         default="",
-        help="version of the data to be uploaded",
+        help="version of the data to be uploaded. Must be a timestamp in the format YYYYmmddHHMMSS",
     )
     args = parser.parse_args()
 

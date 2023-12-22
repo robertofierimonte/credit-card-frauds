@@ -25,7 +25,6 @@ download-data: ## Download the dataset inside the `data` folder for local usage 
 setup: ## Install all the required Python dependencies, download the data, and create a jupyter kernel for the project
 	@poetry env use $(shell cat .python-version) && \
 		poetry install --without beam --sync && \
-		$(MAKE) download-data && \
 		poetry run python -m ipykernel install --user --name="credit-card-frauds-venv"
 
 unit-tests: ## Runs unit tests for pipeline components
