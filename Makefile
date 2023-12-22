@@ -1,15 +1,13 @@
 #!make
-.envvars: set-current-env-vars
-set-current-env-vars:
-	@poetry run python -m src.utils.environment
-
--include set-current-env-vars
 -include .env
 data-version ?= ""
 export
 
 help: ## Display this help screen
 	@grep -h -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
+set-current-env-vars: ## Update the .env file using the current environment variables
+	@poetry run python -m src.utils.environment
 
 pre-commit: ## Run the pre-commit over the entire repo
 	@poetry run pre-commit run --all-files
@@ -37,7 +35,7 @@ trigger-tests: ## Runs unit tests for the pipeline trigger code
 	@unset GOOGLE_APPLICATION_CREDENTIALS VERTEX_TRIGGER_MODE && \
     poetry run python -m pytest tests/trigger --junitxml=trigger.xml
 
-e2e-tests: ## Compile pipeline, trigger pipeline and perform end-to-end (E2E) pipeline tests. Must specify pipeline=<training|prediction>
+e2e-tests: ## Compile pipeline, trigger pipeline and perform end-to-end (E2E) pipeline tests. Must specify pipeline=<training|deployment>
 	@$(MAKE) compile && \
 	poetry run python -m pytest tests/pipelines/$(pipeline) --junitxml=$(pipeline).xml
 
@@ -45,19 +43,23 @@ upload-data: ## Upload the data from the local folder to Bigquery and create a s
 	@poetry run python -m scripts.upload_data --data-version ${data-version}
 
 build-image: ## Build the Docker image locally
-	@docker build  \
-		-f ./containers/Dockerfile \
-		--build-arg BUILDKIT_INLINE_CACHE=1 \
-		--cache-from ${IMAGE_NAME} \
-		--tag ${IMAGE_NAME} \
-		--build-arg PYTHON_VERSION="$(shell cat .python-version)" \
-		--build-arg POETRY_VERSION="1.6.1" \
-		.
-
-push-image: ## Push the Docker image to the container registry. Must specify image=<base|bitbucket-cicd>
-	@$(MAKE) build-image && \
-		gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS} --quiet --verbosity error && \
+	gcloud auth activate-service-account \
+		--key-file=${GOOGLE_APPLICATION_CREDENTIALS} \
+		--quiet \
+		--verbosity error \
+		--project=${VERTEX_PROJECT_ID} && \
 		gcloud auth configure-docker ${VERTEX_LOCATION}-docker.pkg.dev --quiet --verbosity error && \
+		docker build  \
+			-f ./containers/Dockerfile \
+			--build-arg BUILDKIT_INLINE_CACHE=1 \
+			--cache-from ${IMAGE_NAME} \
+			--tag ${IMAGE_NAME} \
+			--build-arg PYTHON_VERSION="$(shell cat .python-version)" \
+			--build-arg POETRY_VERSION="1.6.1" \
+			.
+
+push-image: ## Push the Docker image to the container registry
+	$(MAKE) build-image && \
 		docker push ${IMAGE_NAME}
 
 compile: ## Compile the pipeline. Must specify pipeline=<training|prediction>

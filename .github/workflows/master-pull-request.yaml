@@ -2,8 +2,12 @@
 name: Feature branch CI/CD Pipeline
 
 on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
   push:
-    branches-ignore:
+    branches:
+      - non-existing-branch
+  pull_request:
+    branches:
       - master
 
 jobs:
@@ -83,6 +87,21 @@ jobs:
           poetry --version
           poetry config virtualenvs.in-project true
 
+  upload-pipelines:
+    needs: push-docker-image
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
       - name: Set up Python
         uses: actions/setup-python@v5
         id: setup-python
@@ -103,17 +122,78 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Test Cloud SDK
-        run: gcloud info
-
-      - name: Build and push Docker image
+      - name: Compile pipelines
         run: |
           make set-current-env-vars
-          make push-image
+          make compile pipeline=training
+          make compile pipeline=deployment
+          gsutil cp training.json ${VERTEX_PIPELINE_ROOT}
+          gsutil cp deployment.json ${VERTEX_PIPELINE_ROOT}
+
+  run-training-pipeline:
+    needs: upload-pipelines
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: '3.10'
+          cache: poetry
+
+      - name: Install dependencies
+        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
+        run: poetry install --without beam --sync
+
+      - name: Run training pipeline
+        run: |
+          echo ${TF_SERVICE_ACCOUNT_KEY} > key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=key.json
+          make set-current-env-vars
+          make run pipeline=training
         env:
-          GITHUB_REF_NAME: ${{ github.ref }}
-          DOCKER_REPO: docker-repo
           TF_SERVICE_ACCOUNT_KEY: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
-          VERTEX_PROJECT_ID: ${{ vars.VERTEX_PROJECT_ID }}
-          VERTEX_LOCATION: ${{ vars.VERTEX_LOCATION }}
-          VERTEX_SA_EMAIL: ${{ vars.VERTEX_SA_EMAIL }}
+
+  run-deployment-pipeline:
+    needs: run-training-pipeline
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: '3.10'
+          cache: poetry
+
+      - name: Install dependencies
+        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
+        run: poetry install --without beam --sync
+
+      - name: Run deployment pipeline
+        run: |
+          echo ${TF_SERVICE_ACCOUNT_KEY} > key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=key.json
+          make set-current-env-vars
+          make run pipeline=deployment

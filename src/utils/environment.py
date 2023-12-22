@@ -104,16 +104,18 @@ def set_env_variables(env_var_path: os.PathLike = ".env") -> None:
     project_id = current_env_vars["VERTEX_PROJECT_ID"]
     project_location = current_env_vars["VERTEX_LOCATION"]
 
-    pipeline_root = f"gs://{project_id}/{repo_name}"
+    gcs_root = f"gs://{project_id}/{repo_name}"
 
     if git_tag != "no-tag":
         pipeline_tag = git_tag
         image_tag = git_tag
-        pipeline_files_gcs_path = f"{pipeline_root}/{git_tag}"
+        pipeline_root = f"{gcs_root}-pipeline-root/{git_tag}"
+        pipeline_files_gcs_path = f"{gcs_root}/{git_tag}"
     else:
         pipeline_tag = f"{git_branch}-{commit_sha}"
         image_tag = git_branch
-        pipeline_files_gcs_path = f"{pipeline_root}/{git_branch}/{commit_sha}"
+        pipeline_root = f"{gcs_root}-pipeline-root/{git_branch}/{commit_sha}"
+        pipeline_files_gcs_path = f"{gcs_root}/{git_branch}/{commit_sha}"
 
     image_name = f"{project_location}-docker.pkg.dev/{project_id}/{docker_repo}"
     image_name = f"{image_name}/{repo_name}:{image_tag}"
