@@ -3,7 +3,7 @@
 <!-- PROJECT LOGO -->
 <br>
 <div align="center">
-  <a href="https://bitbucket.org/robertofierimonte/credit-card-frauds/">
+  <a href="https://github.com/robertofierimonte/credit-card-frauds/">
     <img src="docs/images/logo.png" alt="Logo" height="350">
   </a>
 

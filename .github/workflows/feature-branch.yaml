@@ -5,6 +5,9 @@ on:  # yamllint disable-line rule:truthy
   push:
     branches-ignore:
       - master
+    paths-ignore:
+      - docs/**
+      - README.md
 
 jobs:
   install-dependencies:
@@ -31,6 +34,9 @@ jobs:
       - name: Install dependencies
         if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
         run: poetry install --without beam --sync
+
+      - name: Echo event name
+        run: echo ${{ github.event_name }}
 
   run-unit-tests:
     needs: install-dependencies

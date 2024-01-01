@@ -6,13 +6,16 @@ import re
 from distutils.util import strtobool
 from typing import Optional
 
+import functions_framework
+from cloudevents.http import CloudEvent
 from google.cloud import aiplatform
 from loguru import logger
 
 from src.trigger.utils import wait_pipeline_until_complete
 
 
-def cf_handler(event: dict) -> aiplatform.PipelineJob:
+@functions_framework.cloud_event
+def cf_handler(event: CloudEvent) -> aiplatform.PipelineJob:
     """Handle the Pub/Sub event and make a call to trigger the KFP pipeline.
 
     Args:
@@ -25,8 +28,10 @@ def cf_handler(event: dict) -> aiplatform.PipelineJob:
     Returns:
         aiplatform.PipelineJob: Pipeline job that is triggered as result
     """
-    event["data"] = base64.b64decode(event["data"]).decode("utf-8")
-    event["data"] = json.loads(event["data"])
+    event.data["message"]["data"] = base64.b64decode(
+        event.data["message"]["data"]
+    ).decode("utf-8")
+    event.data["message"]["data"] = json.loads(event["data"])
 
     return trigger_pipeline_from_payload(event)
 
