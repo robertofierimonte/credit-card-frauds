@@ -70,12 +70,10 @@ def wait_pipeline_until_complete(job: PipelineJob, location: str = "europe-west2
     state = None
 
     while state not in _PIPELINE_COMPLETE_STATES:
-
         time_snapshot_2 = time.time()
         state = _get_pipeline_state(job.job_id, location=location)
 
         if time_snapshot_2 - time_snapshot_1 >= log_wait:
-
             logger.info(f"Pipeline {job.name} is {state}")
             log_wait = min(log_wait * _WAIT_TIME_MULTIPLIER, _MAX_WAIT_TIME)
             time_snapshot_1 = time_snapshot_2

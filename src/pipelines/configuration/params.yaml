@@ -2,9 +2,9 @@
 models:
   - logistic_regression
   - sgd_classifier
-  - random_forest
-  - xgboost
-  - lightgbm
+  # - random_forest
+  # - xgboost
+  # - lightgbm
 data_processing_args:
   data_sampling: rose
   rose_shrinkage: 0.5

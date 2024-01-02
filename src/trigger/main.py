@@ -11,7 +11,7 @@ from cloudevents.http import CloudEvent
 from google.cloud import aiplatform
 from loguru import logger
 
-from src.trigger.utils import wait_pipeline_until_complete
+from .utils import wait_pipeline_until_complete
 
 
 @functions_framework.cloud_event
@@ -28,12 +28,11 @@ def cf_handler(event: CloudEvent) -> aiplatform.PipelineJob:
     Returns:
         aiplatform.PipelineJob: Pipeline job that is triggered as result
     """
-    event.data["message"]["data"] = base64.b64decode(
-        event.data["message"]["data"]
-    ).decode("utf-8")
-    event.data["message"]["data"] = json.loads(event["data"])
+    data = base64.b64decode(event.data["message"]["data"]).decode("utf-8")
+    data = json.loads(data)
+    payload = {"attributes": event.data["message"]["attributes"], "data": data}
 
-    return trigger_pipeline_from_payload(event)
+    return trigger_pipeline_from_payload(payload)
 
 
 def trigger_pipeline_from_payload(payload: dict) -> aiplatform.PipelineJob:
@@ -47,6 +46,8 @@ def trigger_pipeline_from_payload(payload: dict) -> aiplatform.PipelineJob:
     """
     payload = convert_payload(payload)
     env = get_env()
+    logger.debug(f"Payload: {payload}.")
+    logger.debug(f"Environment variables: {env}.")
 
     return trigger_pipeline(
         project_id=env["project_id"],
@@ -154,7 +155,7 @@ def convert_payload(payload: dict) -> dict:
     env_value = os.environ.get("TEMPLATE_BASE_PATH")
     if env_value is not None:
         path = f"{env_value}/{payload['attributes']['template_path']}"
-        payload["data"]["template_path"] = path
+        payload["attributes"]["template_path"] = path
 
     # if MODEL_FILE_PATH is set, overwrite the one in payload
     env_value = os.environ.get("MODEL_FILE_PATH")
@@ -221,10 +222,10 @@ def sandbox_run() -> Optional[aiplatform.PipelineJob]:
     """
     args = get_args()
 
-    with open(args.payload, "r") as f:
+    with open(args.payload) as f:
         payload = json.load(f)
 
-    if args.data_version and args.data_version != "":
+    if hasattr(args, "data_version") and args.data_version != "":
         if re.match(
             r"^[0-9]{4}(((0[13578]|(10|12))(0[1-9]|[1-2][0-9]|3[0-1]))|(02(0[1-9]|[1-2][0-9]))|((0[469]|11)(0[1-9]|[1-2][0-9]|30)))(([01]\d|2[0-3])([0-5]\d)([0-5]\d))$",  # noqa: E501
             args.data_version,

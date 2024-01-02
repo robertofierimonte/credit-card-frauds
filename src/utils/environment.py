@@ -1,7 +1,6 @@
 import os
 import re
 from pathlib import Path
-from typing import Tuple
 
 import dotenv
 from loguru import logger
@@ -16,7 +15,7 @@ def _clean_git_info(*args: str) -> tuple[str, ...]:
     return (re.sub(r"[_.:\/]", "-", a).lower() for a in args)
 
 
-def get_current_git_info() -> Tuple[bool, str, str, str, str, str]:
+def get_current_git_info() -> tuple[bool, str, str, str, str, str]:
     """Return git branch, sha, and running environment of the repository.
 
     Returns:

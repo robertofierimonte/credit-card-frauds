@@ -246,7 +246,6 @@ def training_pipeline(
         )
 
         with dsl.ParallelFor(items=models, name="Train and evaluate models") as item:
-
             train = (
                 train_job(
                     training_data=extract_training_data.outputs["dataset"],
@@ -317,7 +316,7 @@ def training_pipeline(
                 .set_caching_options(False)
             )
 
-            challenge_champion_model = (
+            _ = (
                 compare_champion_challenger(
                     test_data=extract_test_data.outputs["dataset"],
                     target_column=config_params["target_column"],
@@ -331,7 +330,7 @@ def training_pipeline(
                 .set_caching_options(False)
             )
 
-        label_challenger = (
+        _ = (
             update_version_alias(
                 model_id="credit-card-frauds",
                 project_id=project_id,

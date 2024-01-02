@@ -180,8 +180,8 @@ def test_pipeline_tasks(tasks: list, expected_tasks: dict, allow_tasks_missing: 
     else:
         missing_tasks = [
             task_name
-            for task_name in expected_tasks.keys()
-            if task_name not in actual_tasks_expected.keys()
+            for task_name in expected_tasks
+            if task_name not in actual_tasks_expected
         ]
         assert len(missing_tasks) == 0, f"expected but missing tasks: {missing_tasks}"
 
@@ -200,9 +200,7 @@ def test_pipeline_tasks(tasks: list, expected_tasks: dict, allow_tasks_missing: 
         actual_outputs = actual_tasks_expected[task_name]
         # 2-1. if the output artifact are as expected
         diff = set(expected_output).symmetric_difference(actual_outputs.keys())
-        assert (
-            len(diff) == 0
-        ), (
+        assert len(diff) == 0, (
             f"task: {task_name}, "
             f"expected_output {expected_output}, "
             f"actual_outputs: {actual_outputs.keys()}."
@@ -217,9 +215,7 @@ def test_pipeline_tasks(tasks: list, expected_tasks: dict, allow_tasks_missing: 
             # if the output uri is a gcs path, fetch the file
             elif output_uri.startswith("gs://"):
                 file_size = test_gcs_uri(output_uri, storage_client)
-                assert (
-                    file_size > 0
-                ), f"{output_artifact} in task {task_name} is not accessible"
+                assert file_size > 0, f"{output_artifact} in task {task_name} is not accessible"
             # for Vertex resource check if the resource exists
             elif output_uri.startswith("projects/"):
                 # all Vertex AI resource uri following this pattern:
@@ -229,19 +225,13 @@ def test_pipeline_tasks(tasks: list, expected_tasks: dict, allow_tasks_missing: 
                     output_uri.split("/")[-1],  # id
                     output_uri.split("/")[-3],  # location
                 )
-                assert (
-                    object_existence
-                ), (
+                assert object_existence, (
                     f"{output_artifact} in task {task_name} is not accessible "
                     f"with {output_uri.split('/')[-1]}."
                 )
 
 
-def pipeline_e2e_test(
-    payload_path: str,
-    common_tasks: dict,
-    **kwargs
-):
+def pipeline_e2e_test(payload_path: str, common_tasks: dict, **kwargs):
     """
     Test pipeline e2e for all expected tasks.
 

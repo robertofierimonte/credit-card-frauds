@@ -12,7 +12,6 @@ scripts/
 src/components/
 src/pipelines/
 src/trigger/
-src/utils/
 src/__version__.py
 terraform/
 tests/

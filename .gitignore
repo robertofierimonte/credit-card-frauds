@@ -81,3 +81,11 @@ config.json
 # Data
 data/*
 !/data/.gitkeep
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.lock.hcl
+terraform/*.tfplan
+terraform/*.json
+terraform/*.zip

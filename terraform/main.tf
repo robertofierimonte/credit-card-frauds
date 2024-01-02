@@ -4,10 +4,10 @@ module "pubsub_trigger" {
   project_id                 = var.project_id
   region                     = var.region
   pubsub_topic_name          = "${var.pubsub_topic_name}-${var.name_suffix}"
-  cloud_run_name             = "${var.cloud_run_name}-${var.name_suffix}"
+  cloud_function_name        = "${var.cloud_function_name}-${var.name_suffix}"
   pubsub_service_account     = var.pubsub_service_account
   pubsub_subscr_ack_deadline = var.pubsub_subscr_ack_deadline
-  cloud_run_config           = var.cloud_run_config
+  cloud_function_config      = var.cloud_function_config
 }
 
 # Cloud Scheduler (for triggering pipelines)

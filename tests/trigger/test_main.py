@@ -6,49 +6,48 @@ import os
 from unittest import mock
 
 import pytest
+from cloudevents.http import CloudEvent
 
 from src.trigger.main import cf_handler, convert_payload, get_env
 
 
 def test_cf_handler():
-
-    test_parameter_values = {"key1": "val1", "key2": "val2"}
-
-    encoded_param_values = str(
-        base64.b64encode(json.dumps(test_parameter_values).encode("utf-8")), "utf-8"
-    )
-
+    data = {"key1": "val1", "key2": "val2"}
+    encoded_data = str(base64.b64encode(json.dumps(data).encode("utf-8")), "utf-8")
     payload = {
         "attributes": {"template_path": "gs://my-bucket/my-template-path.json"},
-        "data": encoded_param_values,
+        "data": encoded_data,
     }
+    attributes = {
+        "type": "google.cloud.pubsub.topic.v1.messagePublished",
+        "source": "//pubsub.googleapis.com/",
+    }
+    event = CloudEvent(attributes=attributes, data={"message": payload})
 
     with mock.patch(
         "src.trigger.main.trigger_pipeline_from_payload"
     ) as mock_trigger_pipeline_from_payload:
-
-        cf_handler(payload, {})
+        cf_handler(event)
 
         mock_trigger_pipeline_from_payload.assert_called_with(
-            payload,
+            {
+                "attributes": {"template_path": "gs://my-bucket/my-template-path.json"},
+                "data": data,
+            }
         )
 
 
 def test_trigger_pipeline():
-
     project_id = "my-test-project"
     location = "europe-west2"
     template_path = "gs://my-bucket/pipeline.json"
     parameter_values = {"key1": "val1", "key2": "val2"}
     pipeline_root = "gs://my-bucket/pipeline_root"
     service_account = "my_service_account@my-test-project.iam.gserviceaccount.com"
-    encryption_spec_key_name = "my-cmek"
-    network = "my-network"
     display_name = "pipeline-execution"
     enable_caching = True
 
     with mock.patch("src.trigger.main.aiplatform") as mock_aiplatform:
-
         from src.trigger.main import trigger_pipeline
 
         pl = trigger_pipeline(
@@ -58,8 +57,6 @@ def test_trigger_pipeline():
             parameter_values=parameter_values,
             pipeline_root=pipeline_root,
             service_account=service_account,
-            encryption_spec_key_name=encryption_spec_key_name,
-            network=network,
             enable_caching=enable_caching,
         )
 
@@ -71,25 +68,18 @@ def test_trigger_pipeline():
             template_path=template_path,
             parameter_values=parameter_values,
             pipeline_root=pipeline_root,
-            encryption_spec_key_name=encryption_spec_key_name,
         )
 
-        pl.submit.assert_called_with(
-            service_account=service_account,
-            network=network,
-        )
+        pl.submit.assert_called_with(service_account=service_account)
 
 
 def test_trigger_pipeline_run():
-
     project_id = "my-test-project"
     location = "europe-west2"
     template_path = "gs://my-bucket/pipeline.json"
     parameter_values = {"key1": "val1", "key2": "val2"}
     pipeline_root = "gs://my-bucket/pipeline_root"
     service_account = "my_service_account@my-test-project.iam.gserviceaccount.com"
-    encryption_spec_key_name = "my-cmek"
-    network = "my-network"
     display_name = "pipeline-execution"
     enable_caching = True
     mode = "run"
@@ -97,7 +87,6 @@ def test_trigger_pipeline_run():
     with mock.patch("src.trigger.main.aiplatform") as mock_aiplatform, mock.patch(
         "src.trigger.main.wait_pipeline_until_complete"
     ) as mock_utils:
-
         from src.trigger.main import trigger_pipeline
 
         pl = trigger_pipeline(
@@ -107,8 +96,6 @@ def test_trigger_pipeline_run():
             parameter_values=parameter_values,
             pipeline_root=pipeline_root,
             service_account=service_account,
-            encryption_spec_key_name=encryption_spec_key_name,
-            network=network,
             enable_caching=enable_caching,
             mode=mode,
         )
@@ -121,15 +108,11 @@ def test_trigger_pipeline_run():
             template_path=template_path,
             parameter_values=parameter_values,
             pipeline_root=pipeline_root,
-            encryption_spec_key_name=encryption_spec_key_name,
         )
 
-        pl.run.assert_called_with(
-            service_account=service_account,
-            network=network,
-        )
+        pl.run.assert_called_with(service_account=service_account)
 
-        mock_utils.assert_called_with(pl)
+        mock_utils.assert_called_with(job=pl)
 
 
 @pytest.fixture
@@ -160,7 +143,7 @@ def patch_datetime_now(monkeypatch):
                     "template_path": "pipeline.json",
                     "enable_caching": None,
                 },
-                "data": {},
+                "data": {"email_notification_recipients": [""]},
             },
         ),
         # enable_caching true
@@ -177,46 +160,12 @@ def patch_datetime_now(monkeypatch):
                     "template_path": "pipeline.json",
                     "enable_caching": True,
                 },
-                "data": {},
-            },
-        ),
-        # pipeline_files_gcs_path NOT overridden
-        (
-            {"PIPELINE_FILES_GCS_PATH": "gs://my-overridden-path"},
-            {
-                "attributes": {
-                    "template_path": "pipeline.json",
-                },
-                "data": {"pipeline_files_gcs_path": "gs://my-original-path"},
-            },
-            {
-                "attributes": {
-                    "template_path": "pipeline.json",
-                    "enable_caching": None,
-                },
-                "data": {"pipeline_files_gcs_path": "gs://my-original-path"},
-            },
-        ),
-        # pipeline_files_gcs_path overridden
-        (
-            {"VERTEX_PIPELINE_FILES_GCS_PATH": "gs://my-overridden-path"},
-            {
-                "attributes": {
-                    "template_path": "pipeline.json",
-                },
-                "data": {"pipeline_files_gcs_path": "gs://my-original-path"},
-            },
-            {
-                "attributes": {
-                    "template_path": "pipeline.json",
-                    "enable_caching": None,
-                },
-                "data": {"pipeline_files_gcs_path": "gs://my-overridden-path"},
+                "data": {"email_notification_recipients": [""]},
             },
         ),
         # template_path NOT overridden
         (
-            {},
+            {"MONITORING_EMAIL_ADDRESS": "email1"},
             {
                 "attributes": {
                     "template_path": "pipeline.json",
@@ -227,7 +176,7 @@ def patch_datetime_now(monkeypatch):
                     "template_path": "pipeline.json",
                     "enable_caching": None,
                 },
-                "data": {},
+                "data": {"email_notification_recipients": ["email1"]},
             },
         ),
         # template_path overridden
@@ -243,24 +192,32 @@ def patch_datetime_now(monkeypatch):
                     "template_path": "gs://my-original-path/pipeline.json",
                     "enable_caching": None,
                 },
-                "data": {},
+                "data": {"email_notification_recipients": [""]},
             },
         ),
         # model_file present and overridden
         (
-            {"MODEL_FILE_PATH": "gs://my-overridden-path"},
+            {
+                "MODEL_FILE_PATH": "gs://my-overridden-path",
+                "MONITORING_EMAIL_ADDRESS": "email1,email2",
+            },
             {
                 "attributes": {
                     "template_path": "pipeline.json",
                 },
-                "data": {"model_file": "gs://my-original-path"},
+                "data": {
+                    "model_file": "gs://my-original-path",
+                },
             },
             {
                 "attributes": {
                     "template_path": "pipeline.json",
                     "enable_caching": None,
                 },
-                "data": {"model_file": "gs://my-overridden-path"},
+                "data": {
+                    "model_file": "gs://my-overridden-path",
+                    "email_notification_recipients": ["email1", "email2"],
+                },
             },
         ),
         # model_file not present and overridden
@@ -276,13 +233,12 @@ def patch_datetime_now(monkeypatch):
                     "template_path": "pipeline.json",
                     "enable_caching": None,
                 },
-                "data": {},
+                "data": {"email_notification_recipients": [""]},
             },
         ),
     ],
 )
 def test_convert_payload(env_vars, test_input, expected):
-
     with mock.patch.dict(os.environ, env_vars, clear=True):
         assert convert_payload(test_input) == expected
 
@@ -290,15 +246,12 @@ def test_convert_payload(env_vars, test_input, expected):
 @pytest.mark.parametrize(
     "env_vars,expected",
     [
-        # encryption_spec_key_name and network present
         (
             {
                 "VERTEX_PROJECT_ID": "my-project-id",
                 "VERTEX_LOCATION": "europe-west2",
                 "VERTEX_PIPELINE_ROOT": "gs://my-pipeline-root/folder",
                 "VERTEX_SA_EMAIL": "my-sa@my-project-id.iam.gserviceaccount.com",
-                "VERTEX_CMEK_IDENTIFIER": "my-cmek",
-                "VERTEX_NETWORK": "my-network",
                 "VERTEX_TRIGGER_MODE": "run",
             },
             {
@@ -306,20 +259,15 @@ def test_convert_payload(env_vars, test_input, expected):
                 "location": "europe-west2",
                 "pipeline_root": "gs://my-pipeline-root/folder",
                 "service_account": "my-sa@my-project-id.iam.gserviceaccount.com",
-                "encryption_spec_key_name": "my-cmek",
-                "network": "my-network",
                 "mode": "run",
             },
         ),
-        # encryption_spec_key_name, mode and network are empty string
         (
             {
                 "VERTEX_PROJECT_ID": "my-project-id",
                 "VERTEX_LOCATION": "europe-west2",
                 "VERTEX_PIPELINE_ROOT": "gs://my-pipeline-root/folder",
                 "VERTEX_SA_EMAIL": "my-sa@my-project-id.iam.gserviceaccount.com",
-                "VERTEX_CMEK_IDENTIFIER": "",
-                "VERTEX_NETWORK": "",
                 "VERTEX_TRIGGER_MODE": "",
             },
             {
@@ -327,33 +275,12 @@ def test_convert_payload(env_vars, test_input, expected):
                 "location": "europe-west2",
                 "pipeline_root": "gs://my-pipeline-root/folder",
                 "service_account": "my-sa@my-project-id.iam.gserviceaccount.com",
-                "encryption_spec_key_name": None,
-                "network": None,
-                "mode": None,
-            },
-        ),
-        # encryption_spec_key_name and network absent
-        (
-            {
-                "VERTEX_PROJECT_ID": "my-project-id",
-                "VERTEX_LOCATION": "europe-west2",
-                "VERTEX_PIPELINE_ROOT": "gs://my-pipeline-root/folder",
-                "VERTEX_SA_EMAIL": "my-sa@my-project-id.iam.gserviceaccount.com",
-            },
-            {
-                "project_id": "my-project-id",
-                "location": "europe-west2",
-                "pipeline_root": "gs://my-pipeline-root/folder",
-                "service_account": "my-sa@my-project-id.iam.gserviceaccount.com",
-                "encryption_spec_key_name": None,
-                "network": None,
                 "mode": None,
             },
         ),
     ],
 )
 def test_get_env(env_vars, expected, monkeypatch):
-
     for k, v in env_vars.items():
         monkeypatch.setenv(k, v)
 
@@ -371,16 +298,13 @@ def test_sandbox_run():
     ) as mock_file, mock.patch(
         "src.trigger.main.trigger_pipeline_from_payload"
     ) as mock_trigger_pipeline_from_payload:
-
         # fix return value of get_args()
-        mock_get_args.return_value = argparse.Namespace(
-            payload="payload.json",
-        )
+        mock_get_args.return_value = argparse.Namespace(payload="payload.json")
 
         from src.trigger.main import sandbox_run
 
         sandbox_run()
 
         mock_get_args.assert_called_once()
-        mock_file.assert_called_once_with("payload.json", "r")
+        mock_file.assert_called_once_with("payload.json")
         mock_trigger_pipeline_from_payload.assert_called_once_with(dummy_payload)

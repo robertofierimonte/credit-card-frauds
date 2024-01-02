@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 from imblearn.over_sampling import RandomOverSampler
@@ -49,7 +49,7 @@ def evaluate_model(
     trained_classifier: ClassifierMixin,
     X: np.ndarray,
     y: np.ndarray,
-) -> Tuple[dict, np.ndarray, np.ndarray]:
+) -> tuple[dict, np.ndarray, np.ndarray]:
     """Evaluates metrics for a given classifier and dataset.
 
     Args:
@@ -125,7 +125,7 @@ def train_model(
     upsampling_coefficient: int = 2,
     use_eval_set: bool = True,
     fit_args: dict = {},
-) -> Tuple[ClassifierMixin, dict]:
+) -> tuple[ClassifierMixin, dict]:
     """Train any sklearn-type classifier and calculate cross-validation metrics.
 
     Args:

@@ -66,13 +66,17 @@ jobs:
         run: make pre-commit
 
       - name: Run unit tests
-        run: make unit-tests
+        run: |
+          make unit-tests
+          make trigger-tests
 
-      - name: Upload unit tests coverage results
+      - name: Upload unit tests results
         uses: actions/upload-artifact@v3
         with:
-          name: coverage
-          path: coverage.xml
+          name: unit-tests-results
+          path: |
+            unit-base.xml
+            trigger.xml
 
   push-docker-image:
     needs: run-unit-tests

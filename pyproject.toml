@@ -76,7 +76,7 @@ apache-beam = {version = "^2.52.0", extras = ["gcp"]}
 
 
 [tool.poetry.group.trigger.dependencies]
-google-cloud-aiplatform = "^1.38.1"
+google-cloud-aiplatform = {version = "^1.38.1", extras = ["pipelines"]}
 functions-framework = "^3.5.0"
 loguru = "^0.7.2"
 

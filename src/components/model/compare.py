@@ -1,4 +1,4 @@
-from typing import List, NamedTuple
+from typing import NamedTuple
 
 from kfp.dsl import Dataset, Input, Model, Output, component
 
@@ -9,7 +9,7 @@ from src.components.dependencies import PIPELINE_IMAGE_NAME
 def compare_models(
     test_data: Input[Dataset],
     target_column: str,
-    models: Input[List[Model]],
+    models: Input[list[Model]],
     model_resource_names: list,
     best_model: Output[Model],
     metric_to_optimise: str,
@@ -20,7 +20,7 @@ def compare_models(
     Args:
         test_data (Input[Dataset]): Evaluation data as a KFP Dataset object.
         target_column (str): Column containing the target column for classification.
-        models (Input[List[Model]]): Collection of candidate models as a list of
+        models (Input[list[Model]]): Collection of candidate models as a list of
             KFP Model objects.
         best_model(Output[Model]): Best model as a KFP Model object, this parameter
             will be passed automatically by the orchestrator. The .path

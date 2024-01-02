@@ -1,7 +1,7 @@
-output "service_url" {
-  value = google_cloud_run_service.run_service.status[0].url
-}
+# output "service_url" {
+#   value = google_cloudfunctions2_function.trigger_service.url
+# }
 
 output "pubsub_id" {
-  value = module.pubsub.id
+  value = google_pubsub_topic.trigger_topic.id
 }

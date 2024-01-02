@@ -32,7 +32,7 @@ def bq_table_to_dataset(
         extract_job_config (Optional[dict], optional): Dict containing optional
             parameters required by the bq extract operation. Defaults to None.
             See available parameters here
-            https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.ExtractJobConfig.html # noqa
+            https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.ExtractJobConfig.html  # noqa: E501
         skip_if_exists (bool): If True, skip extracting the dataset if the
             output resource already exists.
         file_pattern (Optional[str], optional): File pattern to append to the

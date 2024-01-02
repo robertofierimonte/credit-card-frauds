@@ -45,7 +45,6 @@ def deployment_pipeline(
         recipients=email_notification_recipients
     )
     with dsl.ExitHandler(notify_email_task, name="Notify pipeline result"):
-
         export = (
             export_model(
                 model_id="credit-card-frauds",
@@ -76,7 +75,7 @@ def deployment_pipeline(
             .set_caching_options(True)
         )
 
-        replace = (
+        _ = (
             update_version_alias(
                 model_id="credit-card-frauds",
                 model_version="challenger",

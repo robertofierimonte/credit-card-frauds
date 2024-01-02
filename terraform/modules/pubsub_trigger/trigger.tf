@@ -1,66 +1,52 @@
-# Cloud Run Trigger (for triggering pipelines)
-resource "google_cloud_run_service" "run_service" {
-  project  = var.project_id
-  name     = var.cloud_run_name
-  location = var.region
+# Cloud Storage Archive (for Cloud Function source code)
+resource "google_storage_bucket_object" "source_code_archive" {
+  source       = data.archive_file.source_code.output_path
+  content_type = "application/zip"
+  name         = "${join("/", slice(split("/", substr(var.cloud_function_config.archive_bucket, 5, -1)), 1, length(split("/", substr(var.cloud_function_config.archive_bucket, 5, -1)))))}/${var.cloud_function_config.archive_object}"
+  bucket       = split("/", substr(var.cloud_function_config.archive_bucket, 5, -1))[0]
+  depends_on   = [
+    data.archive_file.source_code
+  ]
+}
 
-  template {
-    spec {
-      containers {
-        image   = var.cloud_run_config.image
-        command = var.cloud_run_config.command
-        args    = var.cloud_run_config.args
-
-        dynamic "env" {
-          for_each = var.cloud_run_config.env_vars
-          content {
-            name  = env.key
-            value = env.value
-          }
-        }
-
-        ports {
-          container_port = var.cloud_run_config.container_port
-        }
+# Cloud Function Trigger (for triggering pipelines)
+resource "google_cloudfunctions2_function" "trigger_service" {
+  name                  = var.cloud_function_name
+  project               = var.project_id
+  location              = var.region
+  build_config {
+    runtime     = var.cloud_function_config.runtime
+    entry_point = "cf_handler"
+    source {
+      storage_source {
+        bucket = split("/", substr(var.cloud_function_config.archive_bucket, 5, -1))[0]
+        object = google_storage_bucket_object.source_code_archive.name
       }
-
-      service_account_name = var.cloud_run_config.service_account
-    }
-
-    metadata {
-      annotations = {
-        "autoscaling.knative.dev/maxScale" = "5"
-        "run.googleapis.com/vpc-access-connector" = var.cloud_run_config.vpc_connector
-        "run.googleapis.com/vpc-access-egress" = "all-traffic"
-      }
-
     }
   }
-  traffic {
-    percent         = 100
-    latest_revision = true
+  service_config {
+    service_account_email = var.cloud_function_config.service_account
+    environment_variables = var.cloud_function_config.environment_variables
   }
+  event_trigger {
+    trigger_region        = var.region
+    event_type            = "google.cloud.pubsub.topic.v1.messagePublished"
+    pubsub_topic          = google_pubsub_topic.trigger_topic.id
+    service_account_email = var.cloud_function_config.service_account
+    retry_policy          = "RETRY_POLICY_RETRY"
+  }
+  lifecycle {
+    replace_triggered_by = [
+      google_storage_bucket_object.source_code_archive.md5hash
+    ]
+  }
+  depends_on = [
+    google_storage_bucket_object.source_code_archive
+  ]
 }
 
 # Pub/Sub topic (for triggering pipelines)
-module "pubsub" {
-  source     = "terraform-google-modules/pubsub/google"
-  project_id = var.project_id
-  topic      = var.pubsub_topic_name
-
-  grant_token_creator = false
-  create_subscriptions = true
-
-  push_subscriptions = [
-    {
-      name                        = var.pubsub_topic_name
-      ack_deadline_seconds        = var.pubsub_subscr_ack_deadline
-      oidc_service_account_email  = var.pubsub_service_account
-      push_endpoint               = google_cloud_run_service.run_service.status[0].url
-    },
-  ]
-
-  depends_on = [
-    google_cloud_run_service.run_service,
-  ]
+resource "google_pubsub_topic" "trigger_topic" {
+  project = var.project_id
+  name    = var.pubsub_topic_name
 }

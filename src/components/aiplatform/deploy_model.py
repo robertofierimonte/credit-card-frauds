@@ -128,7 +128,7 @@ def deploy_model(
         )
 
         # Create the monitoring job.
-        job = aiplatform.ModelDeploymentMonitoringJob.create(
+        _ = aiplatform.ModelDeploymentMonitoringJob.create(
             display_name=f"monitoring-job-{endpoint_display_name}",
             logging_sampling_strategy=sampling_config,
             schedule_config=schedule_config,

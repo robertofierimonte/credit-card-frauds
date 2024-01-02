@@ -23,20 +23,18 @@ variable "pubsub_service_account" {
   type        = string
 }
 
-variable "cloud_run_name" {
-  description = "Name of the Cloud Run Service to create for triggering pipelines."
+variable "cloud_function_name" {
+  description = "Name of the Cloud Functions Service to create for triggering pipelines."
   type        = string
 }
 
-variable "cloud_run_config" {
-  description = "Map of configurations for cloud run trigger."
+variable "cloud_function_config" {
+  description = "Map of configurations for cloud function trigger."
   type = object({
-    image           = string
-    service_account = string
-    command         = list(string)
-    args            = list(string)
-    env_vars        = map(string)
-    container_port  = string
-    vpc_connector   = string
+    service_account       = string
+    environment_variables = map(string)
+    archive_bucket        = string
+    archive_object        = string
+    runtime               = string
   })
 }
