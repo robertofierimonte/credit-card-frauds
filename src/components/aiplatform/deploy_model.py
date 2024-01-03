@@ -80,7 +80,7 @@ def deploy_model(
         logger.info("Undeployed all models from existing endpoint.")
 
         for monitoring_job in ModelDeploymentMonitoringJob.list():
-            if monitoring_job.name == endpoint.name:
+            if monitoring_job._gca_resource.endpoint == endpoint.resource_name:
                 ModelDeploymentMonitoringJob.delete(monitoring_job)
         logger.info("Deleted all monitoring jobs from existing endpoint.")
     except NotFound:

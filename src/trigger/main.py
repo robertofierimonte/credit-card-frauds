@@ -46,8 +46,6 @@ def trigger_pipeline_from_payload(payload: dict) -> aiplatform.PipelineJob:
     """
     payload = convert_payload(payload)
     env = get_env()
-    logger.debug(f"Payload: {payload}.")
-    logger.debug(f"Environment variables: {env}.")
 
     return trigger_pipeline(
         project_id=env["project_id"],
