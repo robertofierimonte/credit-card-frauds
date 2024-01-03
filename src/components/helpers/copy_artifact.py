@@ -2,13 +2,10 @@ from typing import Optional
 
 from kfp.dsl import Artifact, Input, Output, component
 
-from src.components.dependencies import LOGURU, PYTHON
+from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PYTHON,
-    packages_to_install=[LOGURU],
-)
+@component(base_image=PIPELINE_IMAGE_NAME)
 def copy_artifact(
     source_artifact: Input[Artifact],
     dest_artifact: Output[Artifact],

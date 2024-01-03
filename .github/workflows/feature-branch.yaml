@@ -1,0 +1,129 @@
+---
+name: Feature branch CI/CD Pipeline
+
+on:  # yamllint disable-line rule:truthy
+  push:
+    branches-ignore:
+      - master
+    paths-ignore:
+      - docs/**
+      - README.md
+
+jobs:
+  install-dependencies:
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: '3.10'
+          cache: poetry
+
+      - name: Install dependencies
+        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
+        run: poetry install --without beam --sync
+
+      - name: Echo event name
+        run: echo ${{ github.event_name }}
+
+  run-unit-tests:
+    needs: install-dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: '3.10'
+          cache: poetry
+
+      - name: Install dependencies
+        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
+        run: poetry install --without beam --sync
+
+      - name: Run pre-commit hooks
+        run: make pre-commit
+
+      - name: Run unit tests
+        run: |
+          make unit-tests
+          make trigger-tests
+
+      - name: Upload unit tests results
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-results
+          path: |
+            unit-base.xml
+            trigger.xml
+
+  push-docker-image:
+    needs: run-unit-tests
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: '3.10'
+          cache: poetry
+
+      - name: Install dependencies
+        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
+        run: poetry install --without beam --sync
+
+      - name: Get GCP credentials
+        uses: google-github-actions/auth@v2
+        id: get-gcp-credentials
+        with:
+          credentials_json: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Test Cloud SDK
+        run: gcloud info
+
+      - name: Build and push Docker image
+        run: |
+          make set-current-env-vars
+          make push-image
+        env:
+          GITHUB_REF_NAME: ${{ github.ref }}
+          DOCKER_REPO: docker-repo
+          TF_SERVICE_ACCOUNT_KEY: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
+          VERTEX_PROJECT_ID: ${{ vars.VERTEX_PROJECT_ID }}
+          VERTEX_LOCATION: ${{ vars.VERTEX_LOCATION }}
+          VERTEX_SA_EMAIL: ${{ vars.VERTEX_SA_EMAIL }}

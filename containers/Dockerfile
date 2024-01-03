@@ -1,5 +1,7 @@
-FROM python:3.9.7-slim-bullseye
+ARG PYTHON_VERSION
+FROM python:${PYTHON_VERSION}-slim-bullseye
 
+ARG POETRY_VERSION
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONHASHSEED=1 \
@@ -9,7 +11,7 @@ ENV PYTHONFAULTHANDLER=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
     PIP_DEFAULT_TIMEOUT=100 \
     # poetry
-    POETRY_VERSION=1.2.2 \
+    POETRY_VERSION=${POETRY_VERSION} \
     POETRY_NO_INTERACTION=1
 
 # Install GCC
@@ -22,13 +24,13 @@ RUN mkdir -p /opt/app
 WORKDIR /opt/app
 
 # Install poetry
-RUN pip install --upgrade pip && \
-    pip install poetry=="${POETRY_VERSION}"
+RUN pip install --upgrade pip --quiet && \
+    pip install poetry=="${POETRY_VERSION}" --quiet
 
 # Install dependencies
 COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false \
-    && poetry install --only base --no-root --no-interaction --no-ansi
+    && poetry install --only main --no-root --no-interaction --no-ansi
 
 # Copy the source code
 COPY src /opt/app/src

@@ -3,9 +3,7 @@ from kfp.dsl import Artifact, Dataset, Input, Metrics, Model, Output, component
 from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PIPELINE_IMAGE_NAME,
-)
+@component(base_image=PIPELINE_IMAGE_NAME)
 def evaluate_model(
     test_data: Input[Dataset],
     target_column: str,
@@ -35,6 +33,9 @@ def evaluate_model(
     from loguru import logger
 
     from src.base.model import evaluate_model
+    from src.utils.logging import setup_logger
+
+    setup_logger()
 
     classifier = joblib.load(model.path)
 
@@ -46,5 +47,5 @@ def evaluate_model(
     testing_metrics, _, _ = evaluate_model(classifier, df_test, y_test)
     logger.info("Evaluation completed.")
     for k, v in testing_metrics.items():
-        if k != "Precision Recall Curve":
+        if k != "precision_recall_curve":
             test_metrics.log_metric(k, v)

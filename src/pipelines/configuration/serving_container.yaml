@@ -1,0 +1,10 @@
+---
+serving_container_ports:
+  - 8080
+serving_container_command:
+  - gunicorn
+serving_container_args:
+  - src.serving_api.app:app
+  - "--config=./src/serving_api/config.py"
+serving_container_predict_route: "/predict"
+serving_container_health_route: "/health"

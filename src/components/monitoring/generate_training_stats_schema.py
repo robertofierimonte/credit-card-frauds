@@ -1,12 +1,9 @@
 from kfp.dsl import Artifact, Dataset, Input, Output, component
 
-from src.components.dependencies import LOGURU, PANDAS, PYARROW, PYTHON, TFDV
+from src.components.dependencies import PIPELINE_IMAGE_NAME, TFDV
 
 
-@component(
-    base_image=PYTHON,
-    packages_to_install=[LOGURU, PYARROW, PANDAS, TFDV],
-)
+@component(base_image=PIPELINE_IMAGE_NAME, packages_to_install=[TFDV])
 def generate_training_stats_schema(
     training_data: Input[Dataset],
     training_stats: Output[Artifact],

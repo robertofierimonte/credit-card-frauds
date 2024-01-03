@@ -4,15 +4,18 @@ import json
 import os
 import re
 from distutils.util import strtobool
-from typing import List, Optional
+from typing import Optional
 
+import functions_framework
+from cloudevents.http import CloudEvent
 from google.cloud import aiplatform
 from loguru import logger
 
-from src.trigger.utils import wait_pipeline_until_complete
+from .utils import wait_pipeline_until_complete
 
 
-def cf_handler(event: dict) -> aiplatform.PipelineJob:
+@functions_framework.cloud_event
+def cf_handler(event: CloudEvent) -> aiplatform.PipelineJob:
     """Handle the Pub/Sub event and make a call to trigger the KFP pipeline.
 
     Args:
@@ -25,10 +28,11 @@ def cf_handler(event: dict) -> aiplatform.PipelineJob:
     Returns:
         aiplatform.PipelineJob: Pipeline job that is triggered as result
     """
-    event["data"] = base64.b64decode(event["data"]).decode("utf-8")
-    event["data"] = json.loads(event["data"])
+    data = base64.b64decode(event.data["message"]["data"]).decode("utf-8")
+    data = json.loads(data)
+    payload = {"attributes": event.data["message"]["attributes"], "data": data}
 
-    return trigger_pipeline_from_payload(event)
+    return trigger_pipeline_from_payload(payload)
 
 
 def trigger_pipeline_from_payload(payload: dict) -> aiplatform.PipelineJob:
@@ -41,8 +45,6 @@ def trigger_pipeline_from_payload(payload: dict) -> aiplatform.PipelineJob:
         aiplatform.PipelineJob: Pipeline job that is triggered as result
     """
     payload = convert_payload(payload)
-    logger.debug(f"enable_caching: {payload['attributes']['enable_caching']}.")
-    logger.debug(f"data_version: {payload['data']['data_version']}.")
     env = get_env()
 
     return trigger_pipeline(
@@ -93,7 +95,7 @@ def trigger_pipeline(
     aiplatform.init(project=project_id, location=location)
 
     # Instantiate PipelineJob object
-    pipeline_job = aiplatform.pipeline_jobs.PipelineJob(
+    pipeline_job = aiplatform.PipelineJob(
         display_name="pipeline-execution",
         template_path=template_path,
         pipeline_root=pipeline_root,
@@ -151,7 +153,7 @@ def convert_payload(payload: dict) -> dict:
     env_value = os.environ.get("TEMPLATE_BASE_PATH")
     if env_value is not None:
         path = f"{env_value}/{payload['attributes']['template_path']}"
-        payload["data"]["template_path"] = path
+        payload["attributes"]["template_path"] = path
 
     # if MODEL_FILE_PATH is set, overwrite the one in payload
     env_value = os.environ.get("MODEL_FILE_PATH")
@@ -187,11 +189,11 @@ def get_env() -> dict:
     }
 
 
-def get_args(args: List[str] = None) -> argparse.Namespace:
+def get_args(args: list[str] = None) -> argparse.Namespace:
     """Get args from command line args.
 
     Args:
-        args (List[str], optional): Command line arguments submitted to
+        args (list[str], optional): Command line arguments submitted to
             src.trigger.main. Defaults to None.
 
     Returns:
@@ -199,14 +201,6 @@ def get_args(args: List[str] = None) -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--payload", type=str, help="Path to payload json file.")
-    parser.add_argument(
-        "--enable-caching",
-        type=str,
-        help=(
-            "Whether to enable caching of the pipeline components. "
-            "Must be one of 'true', 'false', 'null', or 'none'."
-        ),
-    )
     parser.add_argument(
         "--data-version",
         type=str,
@@ -226,23 +220,18 @@ def sandbox_run() -> Optional[aiplatform.PipelineJob]:
     """
     args = get_args()
 
-    with open(args.payload, "r") as f:
+    with open(args.payload) as f:
         payload = json.load(f)
 
-    if args.data_version and args.data_version != "":
-        if re.match(r"\d{8}T\d{6}", args.data_version):
+    if hasattr(args, "data_version") and args.data_version != "":
+        if re.match(
+            r"^[0-9]{4}(((0[13578]|(10|12))(0[1-9]|[1-2][0-9]|3[0-1]))|(02(0[1-9]|[1-2][0-9]))|((0[469]|11)(0[1-9]|[1-2][0-9]|30)))(([01]\d|2[0-3])([0-5]\d)([0-5]\d))$",  # noqa: E501
+            args.data_version,
+        ):
             payload["data"]["data_version"] = args.data_version
         else:
             logger.warning(
                 "Argument `data-version` is in the wrong format. It will be ignored."
-            )
-
-    if args.enable_caching and args.enable_caching != "":
-        if args.enable_caching.lower() in ["true", "false", "none", "null"]:
-            payload["attributes"]["enable_caching"] = args.enable_caching
-        else:
-            logger.warning(
-                "Argument `enable-caching` is in the wrong format. It will be ignored."
             )
 
     return trigger_pipeline_from_payload(payload)

@@ -4,8 +4,8 @@
         "template_path": "deployment.json"
     },
     "data": {
-        "dataset_id": "credit_card_frauds",
-        "dataset_location": "europe-west2",
-        "data_version": ""
+        "project_id": "robertofierimonte-ml-pipe",
+        "project_location": "europe-west2",
+        "dataset_id": "credit_card_frauds"
     }
 }

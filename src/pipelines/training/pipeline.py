@@ -1,18 +1,24 @@
+import json
 import os
 import warnings
 from pathlib import Path
 
 from google_cloud_pipeline_components.v1.custom_job.utils import (
-    create_custom_training_job_op_from_component,
+    create_custom_training_job_from_component,
 )
 from google_cloud_pipeline_components.v1.vertex_notification_email import (
     VertexNotificationEmailOp,
 )
 from kfp import compiler, dsl
-from kfp.components.types.type_utils import InconsistentTypeWarning
+from kfp.dsl.types.type_utils import InconsistentTypeWarning
 
-from src.base.utilities import generate_query, read_json
-from src.components.aiplatform import export_model, lookup_model, upload_model
+from src.base.utilities import generate_query, read_yaml
+from src.components.aiplatform import (
+    export_model,
+    lookup_model,
+    update_version_alias,
+    upload_model,
+)
 from src.components.bigquery import bq_table_to_dataset, execute_query
 from src.components.data import get_data_version
 from src.components.dependencies import PIPELINE_IMAGE_NAME
@@ -20,23 +26,27 @@ from src.components.helpers import get_current_time
 from src.components.model import (
     compare_champion_challenger,
     compare_models,
-    evaluate_model,
     train_evaluate_model,
 )
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=InconsistentTypeWarning, append=True)
 
-DEVELOPMENT_STAGE = os.getenv("DEVELOPMENT_STAGE", "no_development_stage")
-BRANCH_NAME = os.getenv("CURRENT_BRANCH", "no_branch")
-COMMIT_HASH = os.getenv("CURRENT_COMMIT", "no_commit")
-PIPELINE_FILES_GCS_PATH = os.getenv("PIPELINE_FILES_GCS_PATH")
-PIPELINE_NAME = f"frauds-training-pipeline-{BRANCH_NAME}-{COMMIT_HASH}"
+PIPELINE_TAG = os.getenv("PIPELINE_TAG")
+VERTEX_PIPELINE_FILES_GCS_PATH = os.getenv("VERTEX_PIPELINE_FILES_GCS_PATH")
+PIPELINE_NAME = f"frauds-training-pipeline-{PIPELINE_TAG}"
+
+ENVIRONMENT = os.environ.get("ENVIRONMENT")
+BRANCH_NAME = os.environ.get("CURRENT_BRANCH")
+COMMIT_HASH = os.environ.get("CURRENT_COMMIT")
+RELEASE_TAG = os.environ.get("CURRENT_TAG")
+SERVICE_ACCOUNT = os.environ.get("VERTEX_SA_EMAIL")
 
 
-train_job = create_custom_training_job_op_from_component(
+train_job = create_custom_training_job_from_component(
     component_spec=train_evaluate_model,
     machine_type="n1-standard-32",
+    service_account=SERVICE_ACCOUNT,
     replica_count=1,
 )
 
@@ -48,6 +58,8 @@ def training_pipeline(
     dataset_id: str,
     dataset_location: str,
     data_version: str,
+    create_replace_tables: bool,
+    skip_bq_extract_if_exists: bool,
     email_notification_recipients: list,
 ):
     """Credit card frauds classification training pipeline.
@@ -64,6 +76,10 @@ def training_pipeline(
         dataset_id (str): Bigquery dataset used to store all the staging datasets.
         dataset_location (str): Location of the BQ staging dataset.
         data_version (str): Specific timestamp in `%Y%m%dT%H%M%S format.
+        create_replace_tables (bool): Whether to replace the staging tables if they
+            already exist.
+        skip_bq_extract_if_exists (bool): Whether to skip the BQ extract step to GCS if
+            the output target already exists.
         email_notification_recipients (list): List of email addresses that will be
             notified upon completion (whether successful or not) of the pipeline.
     """
@@ -73,7 +89,8 @@ def training_pipeline(
 
     queries_folder = Path(__file__).parent / "queries"
     config_folder = Path(__file__).parent.parent / "configuration"
-    config_params = read_json(config_folder / "params.json")
+    config_params = read_yaml(config_folder / "params.yaml")
+    serving_container_params = read_yaml(config_folder / "serving_container.yaml")
 
     models = config_params["models"]
     features = "`" + "`,\n`".join(f for f in config_params["features"]) + "`"
@@ -92,11 +109,11 @@ def training_pipeline(
 
         current_timestamp = (
             get_current_time(
-                timestamp="{{$.pipeline_job_create_time_utc}}",
+                timestamp=dsl.PIPELINE_JOB_CREATE_TIME_UTC_PLACEHOLDER,
                 format_str="%Y%m%d%H%M%S",
             )
             .set_display_name("Format current timestamp")
-            .set_caching_options(False)
+            .set_caching_options(True)
         )
 
         dataset_name = f"{project_id}.{dataset_id}_{data_version.output}"
@@ -109,7 +126,7 @@ def training_pipeline(
         valid_set_table = f"{dataset_name}.validation"
         test_set_table = f"{dataset_name}.testing"
 
-        models_gcs_folder_path = f"{PIPELINE_FILES_GCS_PATH}/models/{COMMIT_HASH}"
+        models_gcs_folder_path = f"{VERTEX_PIPELINE_FILES_GCS_PATH}/models"
 
         preprocessing_query = generate_query(
             queries_folder / "q_preprocessing.sql",
@@ -120,9 +137,10 @@ def training_pipeline(
             preprocessed_table=preprocessed_table,
             fraud_delay_seconds=(config_params["fraud_delay_days"] * 24 * 60 * 60),
             features=features,
+            create_replace_tables=create_replace_tables,
         )
 
-        query_job_config = dict(use_query_cache=True)
+        query_job_config = json.dumps(dict(use_query_cache=True))
 
         preprocess_data = (
             execute_query(
@@ -142,6 +160,7 @@ def training_pipeline(
             training_table=train_set_table,
             validation_table=valid_set_table,
             testing_table=test_set_table,
+            create_replace_tables=create_replace_tables,
         )
 
         train_valid_test = (
@@ -164,6 +183,7 @@ def training_pipeline(
                 dataset_location=dataset_location,
                 file_pattern="file_*",
                 extract_job_config=dict(destination_format="PARQUET"),
+                skip_if_exists=skip_bq_extract_if_exists,
             )
             .after(train_valid_test)
             .set_display_name("Extract training data")
@@ -179,6 +199,7 @@ def training_pipeline(
                 dataset_location=dataset_location,
                 file_pattern="file_*",
                 extract_job_config=dict(destination_format="PARQUET"),
+                skip_if_exists=skip_bq_extract_if_exists,
             )
             .after(train_valid_test)
             .set_display_name("Extract validation data")
@@ -194,6 +215,7 @@ def training_pipeline(
                 dataset_location=dataset_location,
                 file_pattern="file_*",
                 extract_job_config=dict(destination_format="PARQUET"),
+                skip_if_exists=skip_bq_extract_if_exists,
             )
             .after(train_valid_test)
             .set_display_name("Extract test data")
@@ -202,12 +224,25 @@ def training_pipeline(
 
         lookup_champion_model = (
             lookup_model(
-                model_name="credit-card-frauds-champion",
+                model_name="credit-card-frauds",
                 project_id=project_id,
                 project_location=project_location,
+                model_version="champion",
             )
             .set_display_name("Lookup champion model")
             .set_caching_options(True)
+        )
+
+        model_labels = json.dumps(
+            dict(
+                environment=ENVIRONMENT,
+                branch_name=BRANCH_NAME,
+                commit_hash=COMMIT_HASH,
+                release_tag=RELEASE_TAG,
+                pipeline_id=dsl.PIPELINE_JOB_ID_PLACEHOLDER,
+                pipeline_timestamp=f"{current_timestamp.output}",
+                data_version=f"{data_version.output}",
+            )
         )
 
         with dsl.ParallelFor(items=models, name="Train and evaluate models") as item:
@@ -215,6 +250,7 @@ def training_pipeline(
                 train_job(
                     training_data=extract_training_data.outputs["dataset"],
                     validation_data=extract_validation_data.outputs["dataset"],
+                    test_data=extract_test_data.outputs["dataset"],
                     target_column=config_params["target_column"],
                     model_name=item,
                     models_params=config_params["models_params"],
@@ -230,32 +266,16 @@ def training_pipeline(
                 .set_caching_options(True)
             )
 
-            evaluate = (
-                evaluate_model(
-                    test_data=extract_test_data.outputs["dataset"],
-                    target_column=config_params["target_column"],
-                    model=train.outputs["model"],
-                )
-                .after(train)
-                .set_display_name("Evaluate model on test set")
-                .set_caching_options(True)
-            )
-
             upload = (
                 upload_model(
                     model_id="credit-card-frauds",
                     display_name="credit-card-frauds",
                     serving_container_image_uri=PIPELINE_IMAGE_NAME,
+                    serving_container_params=serving_container_params,
                     project_id=project_id,
                     project_location=project_location,
                     model=train.outputs["model"],
-                    pipeline_timestamp=f"{current_timestamp.output}",
-                    data_version=f"{data_version.output}",
-                    labels=dict(
-                        development_stage=DEVELOPMENT_STAGE,
-                        branch_name=BRANCH_NAME,
-                        commit_hash=COMMIT_HASH,
-                    ),
+                    labels=model_labels,
                     description="Credit card frauds model",
                     is_default_version=False,
                     version_description="Credit card frauds model",
@@ -263,68 +283,63 @@ def training_pipeline(
                 )
                 .after(train)
                 .set_display_name("Upload model")
+                .set_caching_options(True)
             )
 
         compare_candidates = (
             compare_models(
                 test_data=extract_test_data.outputs["dataset"],
                 target_column=config_params["target_column"],
-                metric_to_optimise="Average Precision",
+                metric_to_optimise="average_precision",
                 higher_is_better=True,
                 models=dsl.Collected(train.outputs["model"]),
+                model_resource_names=dsl.Collected(
+                    upload.outputs["model_resource_name"]
+                ),
             )
             .set_display_name("Select best model")
-            .set_caching_options(True)
+            .set_caching_options(False)
         )
 
-        with dsl.Condition(
+        with dsl.If(
             lookup_champion_model.outputs["Output"] != "", "Champion model exists"
         ):
             export_champion_model = (
                 export_model(
-                    model_id="credit-card-frauds-champion",
+                    model_id="credit-card-frauds",
                     project_id=project_id,
                     project_location=project_location,
+                    model_version="champion",
                     model_file_name="model.joblib",
                 )
                 .set_display_name("Export champion model")
-                .set_caching_options(True)
+                .set_caching_options(False)
             )
 
-            challenge_champion_model = (
+            _ = (
                 compare_champion_challenger(
                     test_data=extract_test_data.outputs["dataset"],
                     target_column=config_params["target_column"],
                     challenger_model=compare_candidates.outputs["best_model"],
                     champion_model=export_champion_model.outputs["model"],
-                    metric_to_optimise="Average Precision",
+                    metric_to_optimise="average_precision",
                     absolute_threshold=0.1,
                     higher_is_better=True,
                 )
                 .set_display_name("Compare challenger to champion")
-                .set_caching_options(True)
+                .set_caching_options(False)
             )
 
-        upload_challenger = (
-            upload_model(
-                model_id="credit-card-frauds-challenger",
-                display_name="credit-card-frauds-challenger",
-                serving_container_image_uri=PIPELINE_IMAGE_NAME,
+        _ = (
+            update_version_alias(
+                model_id="credit-card-frauds",
                 project_id=project_id,
                 project_location=project_location,
-                model=compare_candidates.outputs["best_model"],
-                pipeline_timestamp=f"{current_timestamp.output}",
-                data_version=f"{data_version.output}",
-                labels=dict(
-                    development_stage=DEVELOPMENT_STAGE,
-                    branch_name=BRANCH_NAME,
-                    commit_hash=COMMIT_HASH,
-                ),
-                description="Credit card frauds challenger model",
-                is_default_version=True,
+                model_version=compare_candidates.outputs["best_model_version"],
+                version_aliases=["challenger"],
             )
-            .set_display_name("Upload challenger model")
-            .set_caching_options(True)
+            .set_display_name("Label challenger model")
+            .set_caching_options(False)
         )
 
 

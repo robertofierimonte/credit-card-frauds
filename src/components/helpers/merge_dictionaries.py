@@ -1,9 +1,7 @@
 from kfp.dsl import component
 
-from src.components.dependencies import PYTHON
 
-
-@component(base_image=PYTHON)
+@component(base_image="python:3.10")
 def merge_dicts(dict1: dict, dict2: dict) -> dict:
     """Merge two dicts.
 

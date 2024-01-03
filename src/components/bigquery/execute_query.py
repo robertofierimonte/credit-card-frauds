@@ -1,17 +1,14 @@
 from kfp.dsl import component
 
-from src.components.dependencies import GOOGLE_CLOUD_BIGQUERY, LOGURU, PYTHON
+from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PYTHON,
-    packages_to_install=[GOOGLE_CLOUD_BIGQUERY, LOGURU],
-)
+@component(base_image=PIPELINE_IMAGE_NAME)
 def execute_query(
     query: str,
     bq_client_project_id: str,
     dataset_location: str = "europe-west2",
-    query_job_config: dict = {},
+    query_job_config: str = "{}",
 ) -> None:
     """Run a BQ query.
 
@@ -19,18 +16,25 @@ def execute_query(
         query (str): SQL query to execute.
         bq_client_project_id (str): Project ID that will be used by the BQ client.
         dataset_location (str): BQ dataset location.
-        query_job_config (dict): Dict containing optional parameters required
-            by the bq query operation. No need to specify destination param.
-            Defaults to {}. See available parameters here:
+        query_job_config (str): JSON-serialised dict containing optional
+            parameters required by the bq query operation. No need to specify
+            destination param. Defaults to "{}". See available parameters here:
             https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.QueryJobConfig.html
 
     Returns:
         GoogleCloudError: If an error is raised by the operation.
     """
+    import json
+
     from google.cloud import bigquery
     from google.cloud.exceptions import GoogleCloudError
     from loguru import logger
 
+    from src.utils.logging import setup_logger
+
+    setup_logger()
+
+    query_job_config = json.loads(query_job_config)
     job_config = bigquery.QueryJobConfig(**query_job_config)
 
     bq_client = bigquery.client.Client(

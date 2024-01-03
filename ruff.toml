@@ -1,0 +1,9 @@
+target-version = "py310"
+
+[lint]
+exclude = ["tests/"]
+select = ["E", "F", "UP", "B", "SIM", "I"]
+ignore = ["F401"]
+
+[lint.per-file-ignores]
+"notebooks/*.ipynb" = ["E402"]

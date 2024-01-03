@@ -1,18 +1,15 @@
 from kfp.dsl import Model, Output, component
 
-from src.components.dependencies import GOOGLE_CLOUD_AIPLATFORM, LOGURU, PYTHON
+from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PYTHON,
-    packages_to_install=[GOOGLE_CLOUD_AIPLATFORM, LOGURU],
-)
+@component(base_image=PIPELINE_IMAGE_NAME)
 def lookup_model(
     model_name: str,
     project_id: str,
     project_location: str,
     model: Output[Model],
-    model_label: str = None,
+    model_version: str = None,
     fail_on_model_not_found: bool = False,
 ) -> str:
     """Fetch a Vertex AI model from the model registry given its name and version.
@@ -23,7 +20,7 @@ def lookup_model(
         project_location (str): Location where the model is stored.
         model (Output[Model]): The fetched model as a KFP Model object. This
             parameter will be passed automatically by the orchestrator.
-        model_label (str, optional): Version alias of the model. Defaults to None.
+        model_version (str, optional): Version alias of the model. Defaults to None.
         fail_on_model_not_found (bool, optional): If set to True, raise an error
             if the model is not found. Defaults to False.
 
@@ -39,15 +36,19 @@ def lookup_model(
     from google.cloud.aiplatform import Model
     from loguru import logger
 
+    from src.utils.logging import setup_logger
+
+    setup_logger()
+
     model_resource_name = ""
     try:
         target_model = Model(
             model_name=model_name,
             project=project_id,
             location=project_location,
-            version=model_label,
+            version=model_version,
         )
-        model_resource_name = target_model.resource_name
+        model_resource_name = target_model.versioned_resource_name
         logger.info(
             f"Model display name: {target_model.display_name}, "
             f"model resource name: {model_resource_name}, "

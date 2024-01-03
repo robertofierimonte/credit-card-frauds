@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 from imblearn.over_sampling import RandomOverSampler
@@ -25,8 +25,8 @@ def calculate_precision_top_k(
     """Calculate the Precision-top-k (P@k) metric.
 
     Args:
-        y (numpy.array): True classification labels
-        prediction_probabilities (numpy.array): Predicted fraud probabilities
+        y (np.ndarray): True classification labels
+        prediction_probabilities (np.ndarray): Predicted fraud probabilities
             for each transaction in y
         k (int): Optional, default value is 200. Number of samples for measuring
             precision, where samples are the k highest rated transactions for
@@ -49,14 +49,14 @@ def evaluate_model(
     trained_classifier: ClassifierMixin,
     X: np.ndarray,
     y: np.ndarray,
-) -> Tuple[dict, np.ndarray, np.ndarray]:
+) -> tuple[dict, np.ndarray, np.ndarray]:
     """Evaluates metrics for a given classifier and dataset.
 
     Args:
-        trained-classifier: Any trained classification model with sklearn type
+        trained-classifier (ClassifierMixin): Any trained classification model with
             "predict" and "predict_proba" methods.
-        X (numpy.array): Input features to the model.
-        y (numpy.array): Target data.
+        X (np.ndarray): Input features to the model.
+        y (np.ndarray): Target data.
 
     Returns:
         dict: Dictionary containing all evaluation results on the data.
@@ -70,14 +70,14 @@ def evaluate_model(
             precision_top_k (float): Precision evaluated on the 200 samples with the
                 highest predicted probability.
             precision_recall_curve: tuple with 3 elements:
-                numpy.array: Precision score for different decision thresholds
+                np.ndarray: Precision score for different decision thresholds
                     on the data.
-                numpy.array: Recall score for different decision thresholds
+                np.ndarray: Recall score for different decision thresholds
                     on the data.
-                numpy.array: All the decision thresholds corresponding
+                np.ndarray: All the decision thresholds corresponding
                     to "precision" and "recall".
-        numpy.array: Model classification for each entry in the data
-        numpy.array: Model prediction for the probability of class 1 (fraud)
+        np.ndarray: Model classification for each entry in the data
+        np.ndarray: Model prediction for the probability of class 1 (fraud)
             for each entry in the data
     """
     # Evaluate test error
@@ -95,29 +95,17 @@ def evaluate_model(
         y, prediction_probabilities
     )
 
-    logger.info(f"Precision: {precision}.")
-    logger.info(f"Recall: {recall}.")
-    logger.info(f"F1 Score: {f1}.")
-    logger.info(f"F2 Score: {f2}.")
-    logger.info(f"F0.5 Score: {f05}.")
-    logger.info(f"Average Precision: {average_precision}.")
-    logger.info(f"Precision Top k: {precision_top_k}.")
-    logger.info(f"AUC ROC: {auc_roc}.")
-    logger.info(f"Number of correctly predicted frauds: {np.sum(y[predictions==1])}.")
-    logger.info(f"Number of predicted frauds: {np.sum(predictions)}.")
-    logger.info(f"Total number of frauds: {np.sum(y)}.")
-
     # Collect all test metrics in one list
     metrics = {
-        "Precision": precision,
-        "Recall": recall,
-        "F1 Score": f1,
-        "F2 Score": f2,
-        "F0.5 Score": f05,
-        "Average Precision": average_precision,
-        "Precision Top 200": precision_top_k,
-        "ROC AUC": auc_roc,
-        "Precision Recall Curve": [precisions, recalls, thresholds],
+        "precision": precision,
+        "recall": recall,
+        "f1_score": f1,
+        "f2_score": f2,
+        "f0.5_score": f05,
+        "average_precision": average_precision,
+        "precision_top_200": precision_top_k,
+        "roc_auc": auc_roc,
+        "precision_recall_curve": [precisions, recalls, thresholds],
     }
 
     return metrics, predictions, prediction_probabilities
@@ -137,16 +125,17 @@ def train_model(
     upsampling_coefficient: int = 2,
     use_eval_set: bool = True,
     fit_args: dict = {},
-) -> Tuple[ClassifierMixin, dict]:
+) -> tuple[ClassifierMixin, dict]:
     """Train any sklearn-type classifier and calculate cross-validation metrics.
 
     Args:
         classifier: any sklearn-type classifier with fit, predict and
             predict_proba methods.
-        X_train (numpy.array): training data features.
-        y_train (numpy.array): training data target variable.
-        X_valid (numpy.array, optional): validation data features. Defaults to None.
-        y_valid (numpy.array, optional): validation data target variable.
+        X_train (np.ndarray): training data features.
+        y_train (np.ndarray): training data target variable.
+        X_valid (Optional[np.ndarray], optional): validation data features.
+            Defaults to None.
+        y_valid (Optional[np.ndarray], optional): validation data target variable.
             Defaults to None.
         data_standardization (str): Optional, default "standard". Used to select the
             mode for data scaling. Options: "standard", "min_max", "none".

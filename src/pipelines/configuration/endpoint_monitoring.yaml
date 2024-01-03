@@ -1,0 +1,26 @@
+---
+target_column: is_fraud
+
+skew_thresholds:
+  mean_amount: 0.01
+  transaction_frequency_all: 0.01
+  fraud_online_rolling_60_days_relative_to_all_frauds: 0.01
+  days_since_first_transaction: 0.01
+
+attribute_skew_thresholds:
+  mean_amount: 0.01
+  transaction_frequency_all: 0.01
+  fraud_online_rolling_60_days_relative_to_all_frauds: 0.01
+  days_since_first_transaction: 0.01
+
+drift_thresholds:
+  mean_amount: 0.01
+  transaction_frequency_all: 0.01
+  fraud_online_rolling_60_days_relative_to_all_frauds: 0.01
+  days_since_first_transaction: 0.01
+
+attribute_drift_thresholds:
+  mean_amount: 0.01
+  transaction_frequency_all: 0.01
+  fraud_online_rolling_60_days_relative_to_all_frauds: 0.01
+  days_since_first_transaction: 0.01

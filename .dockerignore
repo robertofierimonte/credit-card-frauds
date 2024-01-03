@@ -1,4 +1,9 @@
+__pycache_/
 .git/
+.github/
+.pytest_cache/
+.venv/
+artifacts/
 containers/
 data/
 docs/
@@ -7,10 +12,9 @@ scripts/
 src/components/
 src/pipelines/
 src/trigger/
-src/utils/
 src/__version__.py
-__pycache__
-.pytest_cache
+terraform/
+tests/
 .env
 .env.example
 .flake8
@@ -19,7 +23,6 @@ __pycache__
 .pydocstyle
 .python-version
 .yamllint
-bitbucket-pipelines.yml
 kaggle.json
 kaggle.json.example
 Makefile

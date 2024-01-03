@@ -1,12 +1,9 @@
 from kfp.dsl import Artifact, Input, component
 
-from src.components.dependencies import GOOGLE_CLOUD_BIGQUERY, LOGURU, PYTHON
+from src.components.dependencies import PIPELINE_IMAGE_NAME
 
 
-@component(
-    base_image=PYTHON,
-    packages_to_install=[GOOGLE_CLOUD_BIGQUERY, LOGURU],
-)
+@component(base_image=PIPELINE_IMAGE_NAME)
 def dataset_to_bq_table(
     bq_client_project_id: str,
     destination_project_id: str,
@@ -32,6 +29,10 @@ def dataset_to_bq_table(
     """
     from google.cloud import bigquery
     from loguru import logger
+
+    from src.utils.logging import setup_logger
+
+    setup_logger()
 
     client = bigquery.Client(project=bq_client_project_id)
 

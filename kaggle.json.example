@@ -1,1 +1,4 @@
-{"username":"<YOUR-KAGGLE-USERNAME>","key":"<YOUR-KAGGLE-API-KEY>"}
+{
+    "username":"<YOUR-KAGGLE-USERNAME>",
+    "key":"<YOUR-KAGGLE-API-KEY>"
+}
