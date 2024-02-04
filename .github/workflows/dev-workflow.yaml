@@ -1,0 +1,164 @@
+---
+name: Dev CI/CD Pipeline
+
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+  push:
+    branches-ignore:
+      - master
+    paths-ignore:
+      - docs/**
+      - README.md
+      - CHANGELOG.md
+      - .gitignore
+  pull_request:
+    types:
+      - opened
+      - reopened
+    branches:
+      - master
+
+jobs:
+  run-unit-tests:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: '3.10'
+          cache: poetry
+
+      - name: Install dependencies
+        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
+        run: poetry install --without beam --sync
+
+      - name: Cache pre-commit hooks
+        id: cache-pre-commit-hooks
+        uses: actions/cache@v4
+        env:
+          cache-name: pre-commit-cache
+        with:
+          path: |
+            ~/.cache/pre-commit
+          key: ${{ env.cache-name }}-${{ hashFiles('.pre-commit-config.yaml','~/.cache/pre-commit/*') }}
+
+      - name: Run pre-commit hooks
+        run: make pre-commit
+
+      - name: Run unit tests
+        run: |
+          make unit-tests
+          make trigger-tests
+
+      - name: Upload unit tests results
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-tests-results
+          path: |
+            unit-base.xml
+            trigger.xml
+            coverage.xml
+
+  push-docker-image:
+    needs: run-unit-tests
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract branch name
+        id: extract-branch
+        run: |
+          if [[ ${{ github.event_name }} == 'push' ]]; then
+            echo "BRANCH_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+            echo "COMMIT_SHA=${GITHUB_SHA}" >> $GITHUB_OUTPUT
+          else
+            echo "BRANCH_NAME=${GITHUB_HEAD_REF}" >> $GITHUB_OUTPUT
+            echo "COMMIT_SHA=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if branch is in PR
+        id: check-branch
+        if: github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ env.GITHUB_TOKEN }}
+          script: |
+            check_branch_pr = require('./.github/scripts/check_branch_pr.js')
+            return await check_branch_pr({github, context, core})
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          BRANCH_NAME: ${{ steps.extract-branch.outputs.BRANCH_NAME }}
+
+      - name: Setup output for branch in PR
+        id: in-pr-check
+        if: github.event_name == 'push'
+        run: echo "BRANCH_IN_PR=${{ env.BRANCH_IN_PR }}" >> $GITHUB_OUTPUT
+        env:
+          BRANCH_IN_PR: ${{ steps.check-branch.outputs.result }}
+
+      - name: Install Poetry
+        if: github.event_name == 'pull_request' || steps.in-pr-check.outputs.BRANCH_IN_PR == 'true'
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        if: github.event_name == 'pull_request' || steps.in-pr-check.outputs.BRANCH_IN_PR == 'true'
+        id: setup-python
+        with:
+          python-version: '3.10'
+          cache: poetry
+
+      - name: Install dependencies
+        if: github.event_name == 'pull_request' || steps.in-pr-check.outputs.BRANCH_IN_PR == 'true'
+        run: |
+          if [[ ${{ steps.setup-python.outputs.cache-hit != 'true' }} ]]; then
+            poetry install --without beam --sync
+          fi
+
+      - name: Get GCP credentials
+        if: github.event_name == 'pull_request' || steps.in-pr-check.outputs.BRANCH_IN_PR == 'true'
+        uses: google-github-actions/auth@v2
+        id: get-gcp-credentials
+        with:
+          credentials_json: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up Cloud SDK
+        if: github.event_name == 'pull_request' || steps.in-pr-check.outputs.BRANCH_IN_PR == 'true'
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Test Cloud SDK
+        if: github.event_name == 'pull_request' || steps.in-pr-check.outputs.BRANCH_IN_PR == 'true'
+        run: gcloud info
+
+      - name: Build and push Docker image
+        if: github.event_name == 'pull_request' || steps.in-pr-check.outputs.BRANCH_IN_PR == 'true'
+        run: |
+          make set-current-env-vars
+          make push-image
+        env:
+          GITHUB_ENVIRONMENT: dev
+          GITHUB_BRANCH: ${{ steps.extract-branch.outputs.BRANCH_NAME }}
+          GITHUB_COMMIT_SHA: ${{ steps.extract-branch.outputs.COMMIT_SHA }}
+          DOCKER_REPO: docker-repo
+          TF_SERVICE_ACCOUNT_KEY: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
+          VERTEX_PROJECT_ID: ${{ vars.VERTEX_PROJECT_ID }}
+          VERTEX_LOCATION: ${{ vars.VERTEX_LOCATION }}
+          VERTEX_SA_EMAIL: ${{ vars.VERTEX_SA_EMAIL }}

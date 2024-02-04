@@ -4,7 +4,7 @@
 <br>
 <div align="center">
   <a href="https://github.com/robertofierimonte/credit-card-frauds/">
-    <img src="docs/images/logo.png" alt="Logo" height="350">
+    <img src="docs/images/logo.png" alt="Logo" height="250">
   </a>
 
 <h2 align="center">MLOps for Credit Card Frauds Detection</h2>
