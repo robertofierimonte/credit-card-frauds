@@ -1,0 +1,176 @@
+---
+name: Prod CI/CD Pipeline
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  push-docker-image:
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: '3.10'
+          cache: poetry
+
+      - name: Install dependencies
+        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
+        run: poetry install --without beam --sync
+
+      - name: Get GCP credentials
+        uses: google-github-actions/auth@v2
+        id: get-gcp-credentials
+        with:
+          credentials_json: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Test Cloud SDK
+        run: gcloud info
+
+      - name: Build and push Docker image
+        run: |
+          make set-current-env-vars
+          make push-image
+        env:
+          GITHUB_ENVIRONMENT: prod
+          GITHUB_BRANCH: main
+          GITHUB_COMMIT_SHA:
+          GITHUB_TAG: ${{ github.ref_name }}
+          DOCKER_REPO: docker-repo
+          TF_SERVICE_ACCOUNT_KEY: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
+          VERTEX_PROJECT_ID: ${{ vars.VERTEX_PROJECT_ID }}
+          VERTEX_LOCATION: ${{ vars.VERTEX_LOCATION }}
+          VERTEX_SA_EMAIL: ${{ vars.VERTEX_SA_EMAIL }}
+
+  upload-pipelines:
+    needs: push-docker-image
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: '3.10'
+          cache: poetry
+
+      - name: Install dependencies
+        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
+        run: poetry install --without beam --sync
+
+      - name: Get GCP credentials
+        uses: google-github-actions/auth@v2
+        id: get-gcp-credentials
+        with:
+          credentials_json: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Compile pipelines
+        run: |
+          make set-current-env-vars
+          set -a; source .env; set +a
+          make compile pipeline=training
+          make compile pipeline=deployment
+          gsutil cp training.json ${VERTEX_PIPELINE_ROOT}/training.json
+          gsutil cp deployment.json ${VERTEX_PIPELINE_ROOT}/deployment.json
+        env:
+          GITHUB_ENVIRONMENT: prod
+          GITHUB_BRANCH: main
+          GITHUB_COMMIT_SHA:
+          GITHUB_TAG: ${{ github.ref_name }}
+          DOCKER_REPO: docker-repo
+          TF_SERVICE_ACCOUNT_KEY: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
+          VERTEX_PROJECT_ID: ${{ vars.VERTEX_PROJECT_ID }}
+          VERTEX_LOCATION: ${{ vars.VERTEX_LOCATION }}
+          VERTEX_SA_EMAIL: ${{ vars.VERTEX_SA_EMAIL }}
+          MONITORING_EMAIL_ADDRESS: ${{ vars.MONITORING_EMAIL_ADDRESS }}
+
+  run-pipelines:
+    needs: upload-pipelines
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: |
+          pipx install poetry==1.6.1
+          poetry --version
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: '3.10'
+          cache: poetry
+
+      - name: Install dependencies
+        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
+        run: poetry install --without beam --sync
+
+      - name: Run training pipeline
+        run: |
+          echo ${TF_SERVICE_ACCOUNT_KEY} > key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=key.json
+          make set-current-env-vars
+          make run pipeline=training
+        env:
+          GITHUB_ENVIRONMENT: prod
+          GITHUB_BRANCH: main
+          GITHUB_COMMIT_SHA:
+          GITHUB_TAG: ${{ github.ref_name }}
+          DOCKER_REPO: docker-repo
+          TF_SERVICE_ACCOUNT_KEY: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
+          VERTEX_PROJECT_ID: ${{ vars.VERTEX_PROJECT_ID }}
+          VERTEX_LOCATION: ${{ vars.VERTEX_LOCATION }}
+          VERTEX_SA_EMAIL: ${{ vars.VERTEX_SA_EMAIL }}
+          MONITORING_EMAIL_ADDRESS: ${{ vars.MONITORING_EMAIL_ADDRESS }}
+          VERTEX_TRIGGER_MODE: run
+
+      - name: Run deployment pipeline
+        run: |
+          echo ${TF_SERVICE_ACCOUNT_KEY} > key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=key.json
+          make set-current-env-vars
+          make run pipeline=deployment
+        env:
+          GITHUB_ENVIRONMENT: prod
+          GITHUB_BRANCH: main
+          GITHUB_COMMIT_SHA:
+          GITHUB_TAG: ${{ github.ref_name }}
+          DOCKER_REPO: docker-repo
+          TF_SERVICE_ACCOUNT_KEY: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
+          VERTEX_PROJECT_ID: ${{ vars.VERTEX_PROJECT_ID }}
+          VERTEX_LOCATION: ${{ vars.VERTEX_LOCATION }}
+          VERTEX_SA_EMAIL: ${{ vars.VERTEX_SA_EMAIL }}
+          MONITORING_EMAIL_ADDRESS: ${{ vars.MONITORING_EMAIL_ADDRESS }}
+          VERTEX_TRIGGER_MODE: run

@@ -1,47 +1,18 @@
 ---
-name: Master branch PR CI/CD Pipeline
+name: Pre-prod CI/CD Pipeline
 
 on:  # yamllint disable-line rule:truthy
-  workflow_dispatch:
   pull_request:
     branches:
       - master
-    paths-ignore:
-      - docs/**
-      - README.md
+    types:
+      - closed
 
 jobs:
-  install-dependencies:
-    runs-on: ubuntu-latest
-    environment:
-      name: dev
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Poetry
-        run: |
-          pipx install poetry==1.6.1
-          poetry --version
-          poetry config virtualenvs.in-project true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        id: setup-python
-        with:
-          python-version: '3.10'
-          cache: poetry
-
-      - name: Install dependencies
-        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
-        run: poetry install --without beam --sync
-
-      - name: Echo event name
-        run: echo ${{ github.event_name }}
-
   run-unit-tests:
-    needs: install-dependencies
+    if: github.event.pull_request.merged
     runs-on: ubuntu-latest
+    environment: pre-prod
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -72,18 +43,19 @@ jobs:
           make trigger-tests
 
       - name: Upload unit tests results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: unit-tests-results
           path: |
             unit-base.xml
             trigger.xml
+            coverage.xml
 
   push-docker-image:
+    if: github.event.pull_request.merged
     needs: run-unit-tests
     runs-on: ubuntu-latest
-    environment:
-      name: dev
+    environment: pre-prod
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -122,7 +94,9 @@ jobs:
           make set-current-env-vars
           make push-image
         env:
-          GITHUB_REF_NAME: ${{ github.ref }}
+          GITHUB_ENVIRONMENT: pre-prod
+          GITHUB_BRANCH: main
+          GITHUB_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
           DOCKER_REPO: docker-repo
           TF_SERVICE_ACCOUNT_KEY: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
           VERTEX_PROJECT_ID: ${{ vars.VERTEX_PROJECT_ID }}
@@ -130,10 +104,10 @@ jobs:
           VERTEX_SA_EMAIL: ${{ vars.VERTEX_SA_EMAIL }}
 
   upload-pipelines:
+    if: github.event.pull_request.merged
     needs: push-docker-image
     runs-on: ubuntu-latest
-    environment:
-      name: dev
+    environment: pre-prod
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -173,7 +147,9 @@ jobs:
           gsutil cp training.json ${VERTEX_PIPELINE_ROOT}/training.json
           gsutil cp deployment.json ${VERTEX_PIPELINE_ROOT}/deployment.json
         env:
-          GITHUB_REF_NAME: ${{ github.ref }}
+          GITHUB_ENVIRONMENT: pre-prod
+          GITHUB_BRANCH: main
+          GITHUB_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
           DOCKER_REPO: docker-repo
           TF_SERVICE_ACCOUNT_KEY: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
           VERTEX_PROJECT_ID: ${{ vars.VERTEX_PROJECT_ID }}
@@ -181,11 +157,11 @@ jobs:
           VERTEX_SA_EMAIL: ${{ vars.VERTEX_SA_EMAIL }}
           MONITORING_EMAIL_ADDRESS: ${{ vars.MONITORING_EMAIL_ADDRESS }}
 
-  run-training-pipeline:
+  run-pipelines:
+    if: github.event.pull_request.merged
     needs: upload-pipelines
     runs-on: ubuntu-latest
-    environment:
-      name: dev
+    environment: pre-prod
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -214,7 +190,9 @@ jobs:
           make set-current-env-vars
           make run pipeline=training
         env:
-          GITHUB_REF_NAME: ${{ github.ref }}
+          GITHUB_ENVIRONMENT: pre-prod
+          GITHUB_BRANCH: main
+          GITHUB_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
           DOCKER_REPO: docker-repo
           TF_SERVICE_ACCOUNT_KEY: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
           VERTEX_PROJECT_ID: ${{ vars.VERTEX_PROJECT_ID }}
@@ -223,32 +201,6 @@ jobs:
           MONITORING_EMAIL_ADDRESS: ${{ vars.MONITORING_EMAIL_ADDRESS }}
           VERTEX_TRIGGER_MODE: run
 
-  run-deployment-pipeline:
-    needs: run-training-pipeline
-    runs-on: ubuntu-latest
-    environment:
-      name: dev
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Poetry
-        run: |
-          pipx install poetry==1.6.1
-          poetry --version
-          poetry config virtualenvs.in-project true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        id: setup-python
-        with:
-          python-version: '3.10'
-          cache: poetry
-
-      - name: Install dependencies
-        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
-        run: poetry install --without beam --sync
-
       - name: Run deployment pipeline
         run: |
           echo ${TF_SERVICE_ACCOUNT_KEY} > key.json
@@ -256,7 +208,9 @@ jobs:
           make set-current-env-vars
           make run pipeline=deployment
         env:
-          GITHUB_REF_NAME: ${{ github.ref }}
+          GITHUB_ENVIRONMENT: pre-prod
+          GITHUB_BRANCH: main
+          GITHUB_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
           DOCKER_REPO: docker-repo
           TF_SERVICE_ACCOUNT_KEY: ${{ secrets.TF_SERVICE_ACCOUNT_KEY }}
           VERTEX_PROJECT_ID: ${{ vars.VERTEX_PROJECT_ID }}
