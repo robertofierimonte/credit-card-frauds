@@ -34,6 +34,22 @@ jobs:
         if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
         run: poetry install --without beam --sync
 
+      - name: Cache pre-commit hooks
+        id: cache-pre-commit-hooks
+        uses: actions/cache@v4
+        env:
+          cache-name: pre-commit-cache
+        with:
+          path: |
+            ${{ github.workspace }}/.venv
+            ${{ github.workspace }}/.cache/pre-commit
+          key: ${{ env.cache-name }}-${{ hashFiles('.pre-commit-config.yaml','${{ github.workspace }}/.cache/pre-commit/*') }}
+
+      - name: Install pre-commit hooks
+        if: steps.cache-pre-commit-hooks.outputs.cache-hit != 'true'
+        run: |
+          poetry run pre-commit --install-hooks
+
       - name: Run pre-commit hooks
         run: make pre-commit
 
